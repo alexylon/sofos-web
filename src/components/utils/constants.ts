@@ -37,8 +37,8 @@ export const models: Model[] = [
 		type: ModelType.REASONING,
 	},
 	{
-		value: 'claude-opus-4-5',
-		label: 'Claude Opus 4.5',
+		value: 'claude-opus-4-6',
+		label: 'Claude Opus 4.6',
 		provider: 'anthropic',
 		type: ModelType.REASONING,
 	},
