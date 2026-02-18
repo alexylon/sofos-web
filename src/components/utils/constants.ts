@@ -31,8 +31,8 @@ export const models: Model[] = [
 		type: ModelType.REASONING,
 	},
 	{
-		value: 'claude-sonnet-4-5',
-		label: 'Claude Sonnet 4.5',
+		value: 'claude-sonnet-4-6',
+		label: 'Claude Sonnet 4.6',
 		provider: 'anthropic',
 		type: ModelType.REASONING,
 	},
