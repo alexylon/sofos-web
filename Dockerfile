@@ -1,5 +1,5 @@
 # Stage 1: Build the production assets
-FROM node:22-alpine AS builder
+FROM node:22 AS builder
 
 WORKDIR /app
 
@@ -10,27 +10,25 @@ RUN npm install
 # Copy the rest of your application code
 COPY . .
 
-# Build the production assets; this creates the .next directory
+# Build the production assets (standalone output)
 RUN npm run build
 
 # Stage 2: Run the production app
-FROM node:22-alpine AS runner
+FROM node:22-slim AS runner
 
 WORKDIR /app
 
-# Copy only the necessary files from the builder stage
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/.next ./.next
+ENV NODE_ENV=production
+
+# Copy the standalone server (includes all needed node_modules)
+COPY --from=builder /app/.next/standalone ./
+
+# Copy static assets and public files (not included in standalone)
+COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
-
-# (Optional) Copy any other files you need in production
-# COPY --from=builder /app/src ./src
-
-# Install only production dependencies
-RUN npm ci --production
 
 # Expose the port your app listens on
 EXPOSE 3000
 
-# Start the production server
-CMD ["npm", "run", "start"]
+# Start the standalone server
+CMD ["node", "server.js"]

@@ -8,6 +8,7 @@ const nextConfig = {
 	reactStrictMode: true,
 	trailingSlash: true,
 	turbopack: {},
+	output: 'standalone',
 };
 
 module.exports =
