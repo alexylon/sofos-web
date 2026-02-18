@@ -20,6 +20,10 @@ export async function POST(req: Request) {
 	if (model.provider === 'anthropic') {
 		modelName = anthropic(model.value);
 
+		tools = {
+			web_search: anthropic.tools.webSearch_20250305({}),
+		};
+
 		if (reasoningEffort === 'none') {
 			providerOptions = {
 				anthropic: {
@@ -50,6 +54,10 @@ export async function POST(req: Request) {
 	} else if (model.provider === 'google') {
 		modelName = google(model.value);
 
+		tools = {
+			google_search: google.tools.googleSearch({}),
+		};
+
 		providerOptions = {
 			google: {
 				thinkingConfig: {
@@ -63,8 +71,7 @@ export async function POST(req: Request) {
 
 		if (!(reasoningEffort === 'none' && model.value === 'gpt-5-mini')) {
 			tools = {
-				web_search_preview: openai.tools.webSearchPreview({
-					// optional configuration:
+				web_search: openai.tools.webSearch({
 					searchContextSize: 'high',
 					userLocation: {
 						type: 'approximate',
@@ -89,7 +96,7 @@ export async function POST(req: Request) {
 	try {
 		const result: StreamTextResult<any, any> = streamText({
 			model: modelName,
-			messages: convertToModelMessages(messages),
+			messages: await convertToModelMessages(messages),
 			system: `When presenting any code examples or data tables, always use Markdown code fences.
 - Code: wrap with triple backticks and specify the language (e.g., \`\`\`python, \`\`\`rust). Never show code outside fences.
 - Tables: wrap GitHub-flavored Markdown tables inside \`\`\`markdown fences.

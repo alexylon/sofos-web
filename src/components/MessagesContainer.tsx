@@ -14,6 +14,7 @@ const MessagesContainer = () => {
 		hasFiles,
 		hasImages,
 	} = useChatContext();
+	console.log('messages', messages);
 
 	const hasAttachments = hasFiles || hasImages;
 

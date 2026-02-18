@@ -61,7 +61,10 @@ export default function Completion({
 		<div style={{ minHeight: '100%', paddingBottom: '70vh' }}>
 			{messages?.map((message: UIMessage, index: number) => {
 				const isUserMessage = message.role === 'user';
-				const messageTextPart = message.parts.find((part) => part.type === 'text');
+				const messageTextParts = message.parts.filter((part) => part.type === 'text');
+			const messageTextPart = messageTextParts.length > 0
+				? { type: 'text' as const, text: messageTextParts.map((p) => p.text).join('') }
+				: undefined;
 				const messageReasoningPart = [...message.parts].reverse().find((part) =>
 					part.type === 'reasoning' && part.text && getMessageReasoningPartTextTitle(part.text)
 				);
