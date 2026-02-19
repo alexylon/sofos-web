@@ -25,7 +25,7 @@
     "@mui/base": "^5.0.0-beta.60",
     "@mui/icons-material": "^6.1.5",
     "@mui/material": "^6.1.5",
-    "@vercel/blob": "^0.23.4",
+    "@vercel/blob": "^2.2.0",
     "ai": "^6.0.90",
     "copy-to-clipboard": "^3.3.3",
     "next": "^16.1.5",
@@ -34,8 +34,8 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-markdown": "^10.1.0",
-    "react-responsive": "^9.0.2",
-    "react-syntax-highlighter": "^15.5.0",
+    "react-responsive": "^10.0.1",
+    "react-syntax-highlighter": "^16.1.0",
     "rehype-katex": "^7.0.1",
     "remark-math": "^6.0.0",
     "zod": "^3.25.0"
@@ -45,8 +45,8 @@
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "@types/react-syntax-highlighter": "^15.5.7",
-    "eslint": "8.43.0",
-    "eslint-config-next": "13.4.6",
-    "typescript": "5.5.4"
+    "eslint": "^9.26.0",
+    "eslint-config-next": "^16.1.6",
+    "typescript": "^5.9.3"
   }
 }
