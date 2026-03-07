@@ -13,14 +13,14 @@ export const STORAGE_KEYS = {
 
 export const models: Model[] = [
 	{
-		value: 'gpt-5.2',
-		label: 'GPT-5.2',
+		value: 'gpt-5.4',
+		label: 'GPT-5.4',
 		provider: 'openAI',
 		type: ModelType.REASONING,
 	},
 	{
-		value: 'gpt-5.2-codex',
-		label: 'GPT-5.2 Codex',
+		value: 'gpt-5.3-codex',
+		label: 'GPT-5.3 Codex',
 		provider: 'openAI',
 		type: ModelType.REASONING,
 	},
@@ -43,8 +43,8 @@ export const models: Model[] = [
 		type: ModelType.REASONING,
 	},
 	{
-		value: 'gemini-3-pro-preview',
-		label: 'Gemini 3 Pro',
+		value: 'gemini-3.1-pro-preview',
+		label: 'Gemini 3.1 Pro',
 		provider: 'google',
 		type: ModelType.REASONING,
 	},
