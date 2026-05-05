@@ -70,8 +70,10 @@ export default function Completion({
 				);
 				// @ts-ignore
 				const messageReasoningPartTextTitle = getMessageReasoningPartTextTitle(messageReasoningPart?.text);
-				const isLastUserMessage = isUserMessage && index === messages.length - 1;
+				const isLastMessage = index === messages.length - 1;
+				const isLastUserMessage = isUserMessage && isLastMessage;
 				const isLoading = status === Status.SUBMITTED || status === Status.STREAMING;
+				const isStreamingThisMessage = !isUserMessage && isLastMessage && status !== 'ready';
 
 				return (
 					<div
@@ -243,10 +245,10 @@ export default function Completion({
 													{messageTextPart?.text
 														?
 														<MarkdownText>
-															{`${messageTextPart.text}${status !== 'ready' ? '●' : ''}`}
+															{`${messageTextPart.text}${isStreamingThisMessage ? '●' : ''}`}
 														</MarkdownText>
 														:
-														status !== 'ready'
+														isStreamingThisMessage
 															?
 															<Box sx={{
 																mt: '15px',

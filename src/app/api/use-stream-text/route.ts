@@ -69,12 +69,22 @@ export async function POST(req: Request) {
 		modelName = anthropic(model.value);
 		tools = { web_search: anthropic.tools.webSearch_20250305({}) };
 
-		const thinking: AnthropicProviderOptions['thinking'] = reasoningEffort === 'none'
-			? { type: 'disabled' }
-			: { type: 'enabled', budgetTokens: ANTHROPIC_THINKING_BUDGET[reasoningEffort] ?? 0 };
+		// Opus rejects `thinking: { type: 'enabled', budget_tokens }` with a 400
+		// starting at 4.7 and instead uses adaptive thinking + the `effort`
+		// parameter to dial token spend. Adaptive thinking also omits thinking
+		// content by default, so opt back into `display: 'summarized'` to keep
+		// the reasoning UI populated.
+		const anthropicOptions: AnthropicProviderOptions = reasoningEffort === 'none'
+			? { thinking: { type: 'disabled' } }
+			: model.value.startsWith('claude-opus')
+				? {
+					thinking: { type: 'adaptive', display: 'summarized' },
+					effort: reasoningEffort as 'low' | 'medium' | 'high',
+				}
+				: { thinking: { type: 'enabled', budgetTokens: ANTHROPIC_THINKING_BUDGET[reasoningEffort] ?? 0 } };
 
 		providerOptions = {
-			anthropic: { thinking } satisfies AnthropicProviderOptions,
+			anthropic: anthropicOptions,
 		};
 
 		// 1h breakpoint on the (static) system prompt and a 5m rolling
