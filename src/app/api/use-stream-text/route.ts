@@ -1,103 +1,19 @@
 import { openai, OpenAIResponsesProviderOptions } from '@ai-sdk/openai';
 import { anthropic, AnthropicProviderOptions } from '@ai-sdk/anthropic';
 import { google, GoogleGenerativeAIProviderOptions } from '@ai-sdk/google';
-import { convertToModelMessages, streamText, StreamTextResult } from 'ai';
+import { convertToModelMessages, ModelMessage, streamText, SystemModelMessage } from 'ai';
 import { SharedV2ProviderOptions } from '@ai-sdk/provider';
 
 // maxDuration streaming response time is 60 seconds
 export const maxDuration = 60;
 
-export async function POST(req: Request) {
-	// Extract the data from the body of the request
-	const requestBody = await req.json();
-	const { messages, model, reasoningEffort, textVerbosity } = requestBody;
+const ANTHROPIC_THINKING_BUDGET: Record<string, number> = {
+	low: 6000,
+	medium: 12000,
+	high: 24000,
+};
 
-	let modelName;
-	let tools;
-	let providerOptions: SharedV2ProviderOptions;
-
-
-	if (model.provider === 'anthropic') {
-		modelName = anthropic(model.value);
-
-		tools = {
-			web_search: anthropic.tools.webSearch_20250305({}),
-		};
-
-		if (reasoningEffort === 'none') {
-			providerOptions = {
-				anthropic: {
-					thinking: { type: 'disabled' },
-				} satisfies AnthropicProviderOptions,
-			};
-		} else {
-			let budgetTokens = 0;
-
-			if (reasoningEffort === 'low') {
-				budgetTokens = 6000;
-			}
-
-			if (reasoningEffort === 'medium') {
-				budgetTokens = 12000;
-			}
-
-			if (reasoningEffort === 'high') {
-				budgetTokens = 24000;
-			}
-
-			providerOptions = {
-				anthropic: {
-					thinking: { type: 'enabled', budgetTokens },
-				} satisfies AnthropicProviderOptions,
-			};
-		}
-	} else if (model.provider === 'google') {
-		modelName = google(model.value);
-
-		tools = {
-			google_search: google.tools.googleSearch({}),
-		};
-
-		providerOptions = {
-			google: {
-				thinkingConfig: {
-					thinkingLevel: reasoningEffort,
-						includeThoughts: true,
-				},
-			} satisfies GoogleGenerativeAIProviderOptions,
-		};
-	} else {
-		modelName = openai.responses(model.value);
-
-		if (!(reasoningEffort === 'none' && model.value === 'gpt-5-mini')) {
-			tools = {
-				web_search: openai.tools.webSearch({
-					searchContextSize: 'high',
-					userLocation: {
-						type: 'approximate',
-					},
-				}),
-			};
-		}
-
-		providerOptions = {
-			openai: {
-				reasoningEffort: reasoningEffort === 'none' && model.value === 'gpt-5-mini'
-					? 'minimal'
-					: reasoningEffort,
-				textVerbosity,
-				include: ['reasoning.encrypted_content'], // Hence, we need to retrieve the model's encrypted reasoning to be able to pass it to follow-up requests
-				store: false, // No data retention - makes interaction stateless
-				reasoningSummary: 'auto', // output reasoning
-			} satisfies OpenAIResponsesProviderOptions
-		};
-	}
-
-	try {
-		const result: StreamTextResult<any, any> = streamText({
-			model: modelName,
-			messages: await convertToModelMessages(messages),
-			system: `When presenting any code examples or data tables, always use Markdown code fences.
+const SYSTEM_PROMPT = `When presenting any code examples or data tables, always use Markdown code fences.
 - Code: wrap with triple backticks and specify the language (e.g., \`\`\`python, \`\`\`rust). Never show code outside fences.
 - Tables: wrap GitHub-flavored Markdown tables inside \`\`\`markdown fences.
 
@@ -137,7 +53,98 @@ If any other language appears, still respond exclusively in English or Bulgarian
 unless you are explicitly asked to use a different language.
 
 Do not add follow-up questions, invitations for the user to provide more details, or suggestions like "If you tell me X, I can do Y" unless the user explicitly asks for that.
-Do not propose next steps or additional topics unless they are strictly required to answer the question.`,
+Do not propose next steps or additional topics unless they are strictly required to answer the question.`;
+
+export async function POST(req: Request) {
+	const { messages, model, reasoningEffort, textVerbosity, id: chatId } = await req.json();
+
+	const promptMessages: ModelMessage[] = await convertToModelMessages(messages);
+	let systemPrompt: string | SystemModelMessage = SYSTEM_PROMPT;
+
+	let modelName;
+	let tools;
+	let providerOptions: SharedV2ProviderOptions;
+
+	if (model.provider === 'anthropic') {
+		modelName = anthropic(model.value);
+		tools = { web_search: anthropic.tools.webSearch_20250305({}) };
+
+		const thinking: AnthropicProviderOptions['thinking'] = reasoningEffort === 'none'
+			? { type: 'disabled' }
+			: { type: 'enabled', budgetTokens: ANTHROPIC_THINKING_BUDGET[reasoningEffort] ?? 0 };
+
+		providerOptions = {
+			anthropic: { thinking } satisfies AnthropicProviderOptions,
+		};
+
+		// 1h breakpoint on the (static) system prompt and a 5m rolling
+		// breakpoint on the last message so the cached prefix grows with
+		// the conversation instead of restarting each turn. The SDK strips
+		// cache_control from provider-supplied tools, so webSearch_20250305
+		// can't carry a tools breakpoint.
+		systemPrompt = {
+			role: 'system',
+			content: SYSTEM_PROMPT,
+			providerOptions: {
+				anthropic: { cacheControl: { type: 'ephemeral', ttl: '1h' } } satisfies AnthropicProviderOptions,
+			},
+		};
+		const last = promptMessages.at(-1);
+		if (last) {
+			promptMessages[promptMessages.length - 1] = {
+				...last,
+				providerOptions: {
+					...last.providerOptions,
+					anthropic: { cacheControl: { type: 'ephemeral' } } satisfies AnthropicProviderOptions,
+				},
+			};
+		}
+	} else if (model.provider === 'google') {
+		modelName = google(model.value);
+		tools = { google_search: google.tools.googleSearch({}) };
+
+		providerOptions = {
+			google: {
+				thinkingConfig: { thinkingLevel: reasoningEffort, includeThoughts: true },
+			} satisfies GoogleGenerativeAIProviderOptions,
+		};
+	} else {
+		modelName = openai.responses(model.value);
+
+		const isMiniMinimal = reasoningEffort === 'none' && model.value === 'gpt-5-mini';
+
+		if (!isMiniMinimal) {
+			tools = {
+				web_search: openai.tools.webSearch({
+					searchContextSize: 'high',
+					userLocation: { type: 'approximate' },
+				}),
+			};
+		}
+
+		providerOptions = {
+			openai: {
+				reasoningEffort: isMiniMinimal ? 'minimal' : reasoningEffort,
+				textVerbosity,
+				// Round-trip the encrypted hidden chain-of-thought so the model
+				// doesn't re-derive its reasoning on every tool turn.
+				include: ['reasoning.encrypted_content'],
+				store: false, // No data retention - makes interaction stateless
+				reasoningSummary: 'auto',
+				// Per-chat routing key so follow-up turns land on the same
+				// OpenAI cache node and the prefix actually hits its prompt
+				// cache. Cache identity is keyed on prefix bytes; this only
+				// affects routing.
+				promptCacheKey: chatId,
+			} satisfies OpenAIResponsesProviderOptions,
+		};
+	}
+
+	try {
+		const result = streamText({
+			model: modelName,
+			messages: promptMessages,
+			system: systemPrompt,
 			providerOptions,
 			tools,
 			async onStepFinish({ response }) {
@@ -150,21 +157,15 @@ Do not propose next steps or additional topics unless they are strictly required
 				if (error instanceof Error) {
 					console.error('Error:', error.message);
 				}
-			}
+			},
 		});
 
 		return result.toUIMessageStreamResponse();
 	} catch (error) {
-		if (error instanceof Error) {
-			return new Response("Server error: " + error.message, {
-				status: 500,
-				headers: { 'Content-Type': 'text/plain' }
-			});
-		} else {
-			return new Response("Server error: unknown error", {
-				status: 500,
-				headers: { 'Content-Type': 'text/plain' }
-			});
-		}
+		const message = error instanceof Error ? `Server error: ${error.message}` : 'Server error: unknown error';
+		return new Response(message, {
+			status: 500,
+			headers: { 'Content-Type': 'text/plain' },
+		});
 	}
 }

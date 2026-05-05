@@ -13,8 +13,8 @@ export const STORAGE_KEYS = {
 
 export const models: Model[] = [
 	{
-		value: 'gpt-5.4',
-		label: 'GPT-5.4',
+		value: 'gpt-5.5',
+		label: 'GPT-5.5',
 		provider: 'openAI',
 		type: ModelType.REASONING,
 	},
