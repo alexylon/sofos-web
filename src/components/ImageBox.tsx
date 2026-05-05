@@ -1,7 +1,12 @@
 import { Box, Card, useTheme } from '@mui/material';
-import React from 'react';
 
-const ImageBox = ({ file, index, fileURL }: any) => {
+interface ImageBoxProps {
+	file: File;
+	index: number;
+	fileURL: string;
+}
+
+const ImageBox = ({ file, index, fileURL }: ImageBoxProps) => {
 	const theme = useTheme();
 
 	return (

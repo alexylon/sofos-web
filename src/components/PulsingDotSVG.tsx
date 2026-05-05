@@ -3,7 +3,7 @@ import { useTheme } from '@mui/material';
 
 export default function PulsingDotSVG() {
 	const theme = useTheme();
-	const minR = 4;  // radius in px
+	const minR = 4;
 	const maxR = 7;
 
 	return (

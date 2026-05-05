@@ -19,7 +19,6 @@ export const resizeImage = (file: File, maxSize: number): Promise<File> => {
 				return;
 			}
 
-			// Determine the larger dimension and resize accordingly
 			if (width > height) {
 				if (width > maxSize) {
 					height = Math.round((height *= maxSize / width));

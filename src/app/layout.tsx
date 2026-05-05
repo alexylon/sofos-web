@@ -24,7 +24,6 @@ export default function RootLayout({ children }: RootLayoutProps) {
 				<link rel="manifest" href="/manifest.json" />
 				<link rel="apple-touch-icon" href="/sigma.png" />
 				<meta name="theme-color" content="#000000" />
-				<title></title>
 			</head>
 		<body className={inter.className}>
 		<NextAuthProvider>

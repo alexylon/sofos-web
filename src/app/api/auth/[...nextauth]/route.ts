@@ -2,7 +2,6 @@ import NextAuth, { NextAuthOptions } from "next-auth"
 import GithubProvider from "next-auth/providers/github"
 
 const authOptions: NextAuthOptions = {
-	// Configure one or more authentication providers
 	session: {
 		strategy: "jwt",
 	},
@@ -11,7 +10,6 @@ const authOptions: NextAuthOptions = {
 			clientId: process.env.GITHUB_ID as string,
 			clientSecret: process.env.GITHUB_SECRET as string,
 		}),
-		// ...add more providers here
 	],
 	theme: {
 		colorScheme: "dark",

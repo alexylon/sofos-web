@@ -2,13 +2,14 @@ import * as React from 'react';
 import MenuItem from '@mui/material/MenuItem';
 import FormControl from '@mui/material/FormControl';
 import Select, { SelectChangeEvent } from '@mui/material/Select';
-import { Model, ReasoningEffort } from '@/types/types';
-import { ReactNode } from 'react';
+import { Model, ReasoningEffort, TextVerbosity } from '@/types/types';
 import { useTheme } from '@mui/material';
 
+type SelectOption = Model | ReasoningEffort | TextVerbosity;
+
 interface SelectSmallProps {
-	options: Model[] | ReasoningEffort[];
-	handleChange: (event: SelectChangeEvent<string | number>, child: ReactNode) => void;
+	options: readonly SelectOption[];
+	handleChange: (event: SelectChangeEvent<string | number>) => void;
 	value: string | number;
 	style?: React.CSSProperties;
 	disabled?: boolean;
@@ -76,7 +77,7 @@ export default function SelectSmall({ options, handleChange, value, style, disab
 					},
 				}}
 			>
-				{options.map((option: any, index: number) => (
+				{options.map((option, index) => (
 					<MenuItem key={index} value={option.value}>
 						{option.label}
 					</MenuItem>

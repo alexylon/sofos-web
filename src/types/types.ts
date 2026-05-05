@@ -1,7 +1,9 @@
+import type { UIMessage } from '@ai-sdk/react';
+
 export interface Model {
 	value: string;
 	label: string;
-	provider: string;
+	provider: Provider;
 	type: ModelType;
 }
 
@@ -11,15 +13,27 @@ export enum ModelType {
 	HYBRID = "HYBRID",
 }
 
+export enum Provider {
+	OpenAI = "openai",
+	Anthropic = "anthropic",
+	Google = "google",
+}
+
 export interface ReasoningEffort {
-	value: string;
+	value: ReasoningEffortValue;
 	label: string;
 }
 
+export type ReasoningEffortValue = "none" | "low" | "medium" | "high";
+
+export type AnthropicEffortValue = Exclude<ReasoningEffortValue, "none">;
+
 export interface TextVerbosity {
-	value: string;
+	value: TextVerbosityValue;
 	label: string;
 }
+
+export type TextVerbosityValue = "low" | "medium" | "high";
 
 export enum Status {
 	SUBMITTED = "submitted",
@@ -28,4 +42,10 @@ export enum Status {
 	ERROR = "error",
 }
 
-export type StatusType = "submitted" | "streaming" | "ready" | "error";
+export type StatusType = `${Status}`;
+
+export type StoredUIMessage = UIMessage & {
+	createdAt?: Date;
+	modelId?: string;
+	name?: string;
+};

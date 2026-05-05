@@ -1,6 +1,5 @@
-'use client'
+'use client';
 
-import * as React from 'react';
 import { Drawer, IconButton, Typography, useTheme } from '@mui/material';
 import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
 import ListItem from '@mui/material/ListItem';
@@ -10,14 +9,26 @@ import ListItemText from '@mui/material/ListItemText';
 import List from '@mui/material/List';
 import Divider from '@mui/material/Divider';
 import { styled } from '@mui/material/styles';
-import { signOut } from "next-auth/react"
+import { signOut } from 'next-auth/react';
 import ClearIcon from '@mui/icons-material/Clear';
 import Box from '@mui/material/Box';
-import { STORAGE_KEYS } from '@/components/utils/constants';
-import { indexedDBStorage } from '@/components/utils/indexedDBStorage';
+import {
+	ICON_SIZE_SM,
+	MAX_PERSISTED_CHATS,
+	models,
+} from '@/components/utils/constants';
+import { saveCurrentChatIndex, saveModel } from '@/components/utils/storage';
 import { useChatContext } from '@/context/ChatContext';
+import { StoredUIMessage } from '@/types/types';
 
-const formattedDate = (dateString: Date | undefined): string => {
+const DrawerHeader = styled('div')(({ theme }) => ({
+	display: 'flex',
+	alignItems: 'center',
+	...theme.mixins.toolbar,
+	justifyContent: 'center',
+}));
+
+const formattedDate = (dateString: Date | string | undefined): string => {
 	if (!dateString) {
 		return 'No Messages';
 	}
@@ -34,14 +45,11 @@ const formattedDate = (dateString: Date | undefined): string => {
 		hour: '2-digit',
 		minute: '2-digit',
 		second: '2-digit',
-		hour12: false
+		hour12: false,
 	});
 
-	if (isToday) {
-		return `Today ${timeString}`;
-	} else if (isYesterday) {
-		return `Yesterday ${timeString}`;
-	}
+	if (isToday) return `Today ${timeString}`;
+	if (isYesterday) return `Yesterday ${timeString}`;
 
 	return date.toLocaleString('en-GB', {
 		day: '2-digit',
@@ -50,13 +58,14 @@ const formattedDate = (dateString: Date | undefined): string => {
 		hour: '2-digit',
 		minute: '2-digit',
 		second: '2-digit',
-		hour12: false
+		hour12: false,
 	}).replace(/\//g, '.');
 };
 
+const drawerWidth = 200;
+
 const SideBar = () => {
 	const theme = useTheme();
-	const drawerWidth = 200;
 	const chatListBackground = theme.palette.background.paper;
 
 	const {
@@ -71,26 +80,20 @@ const SideBar = () => {
 		saveChatHistory,
 	} = useChatContext();
 
-	const DrawerHeader = styled('div')(({ theme }) => ({
-		display: 'flex',
-		alignItems: 'center',
-		...theme.mixins.toolbar,
-		justifyContent: 'center',
-	}));
-
 	const handleSelectChat = (chatIndex: number) => {
 		setMessages(chatHistory[chatIndex]);
 		setCurrentChatIndex(chatIndex);
+		saveCurrentChatIndex(chatIndex);
 
-		void indexedDBStorage.setItem(STORAGE_KEYS.CURRENT_CHAT_INDEX, chatIndex);
+		const lastMessage = chatHistory[chatIndex]?.at(-1) as StoredUIMessage | undefined;
+		const storedModelValue = lastMessage?.name;
+		const storedModel = storedModelValue
+			? models.find(model => model.value === storedModelValue)
+			: undefined;
 
-		// @ts-ignore
-		const model = chatHistory[chatIndex][chatHistory[chatIndex].length - 1].name;
-
-		if (model) {
-			setModel(model);
-
-			void indexedDBStorage.setItem(STORAGE_KEYS.MODEL, model);
+		if (storedModel) {
+			setModel(storedModel);
+			saveModel(storedModel.value);
 		}
 	};
 
@@ -106,8 +109,7 @@ const SideBar = () => {
 
 		if (index < currentChatIndex) {
 			setCurrentChatIndex(currentChatIndex - 1);
-
-			void indexedDBStorage.setItem(STORAGE_KEYS.CURRENT_CHAT_INDEX, currentChatIndex - 1);
+			saveCurrentChatIndex(currentChatIndex - 1);
 		}
 	};
 
@@ -119,7 +121,6 @@ const SideBar = () => {
 				'& .MuiDrawer-paper': {
 					width: drawerWidth,
 					boxSizing: 'border-box',
-					// @ts-ignore
 					backgroundColor: theme.palette.background.paper,
 				},
 			}}
@@ -133,7 +134,7 @@ const SideBar = () => {
 					fontWeight="bold"
 					color={theme.palette.text.secondary}
 				>
-					Last 20 Chats
+					Last {MAX_PERSISTED_CHATS} Chats
 				</Typography>
 			</DrawerHeader>
 			<Divider />
@@ -141,6 +142,10 @@ const SideBar = () => {
 				{chatHistory.slice().reverse().map((chat, index) => {
 					const chatIndex = chatHistory.length - 1 - index;
 					const isSelected = chatIndex === currentChatIndex;
+					const lastMessage = chat?.at(-1) as StoredUIMessage | undefined;
+					const primary = chat && chat.length > 0
+						? formattedDate(lastMessage?.createdAt)
+						: 'No Messages';
 
 					return (
 						<div key={index}>
@@ -158,11 +163,7 @@ const SideBar = () => {
 									}}
 								>
 									<ListItemText
-										primary={chat && chat.length > 0
-											?
-											// @ts-ignore
-											formattedDate(chat[chat.length - 1]?.createdAt)
-											: 'No Messages'}
+										primary={primary}
 										sx={{ color: theme.palette.text.secondary }}
 									/>
 								</ListItemButton>
@@ -170,12 +171,12 @@ const SideBar = () => {
 									sx={{
 										position: 'absolute',
 										right: 4,
-										height: '26px',
-										width: '26px',
+										height: ICON_SIZE_SM,
+										width: ICON_SIZE_SM,
 									}}
 									onClick={() => handleRemoveChat(chatIndex)}
 								>
-									<ClearIcon sx={{ height: '26px', width: '26px', color: theme.palette.text.secondary, backgroundColor: 'transparent' }}/>
+									<ClearIcon sx={{ height: ICON_SIZE_SM, width: ICON_SIZE_SM, color: theme.palette.text.secondary, backgroundColor: 'transparent' }} />
 								</IconButton>
 							</ListItem>
 						</div>
@@ -185,7 +186,7 @@ const SideBar = () => {
 			<Box sx={{ flexGrow: 1 }} />
 			<Divider />
 			<List>
-				<ListItem key='logout' disablePadding>
+				<ListItem key="logout" disablePadding>
 					<ListItemButton
 						onClick={(e) => {
 							e.preventDefault();
@@ -194,15 +195,15 @@ const SideBar = () => {
 					>
 						<ListItemIcon>
 							<LogoutOutlinedIcon
-								sx={{ height: '26px', width: '26px', color: theme.palette.text.secondary, backgroundColor: theme.palette.background.paper }}
+								sx={{ height: ICON_SIZE_SM, width: ICON_SIZE_SM, color: theme.palette.text.secondary, backgroundColor: theme.palette.background.paper }}
 							/>
 						</ListItemIcon>
-						<ListItemText primary='Log Out' sx={{ color: theme.palette.text.secondary }}/>
+						<ListItemText primary="Log Out" sx={{ color: theme.palette.text.secondary }} />
 					</ListItemButton>
 				</ListItem>
 			</List>
 		</Drawer>
 	);
-}
+};
 
 export default SideBar;

@@ -1,4 +1,3 @@
-import React from 'react';
 import { Box, Grid, Typography } from '@mui/material';
 import Completion from '@/components/Completion';
 import { useChatContext } from '@/context/ChatContext';
@@ -14,7 +13,6 @@ const MessagesContainer = () => {
 		hasFiles,
 		hasImages,
 	} = useChatContext();
-	console.log('messages', messages);
 
 	const hasAttachments = hasFiles || hasImages;
 

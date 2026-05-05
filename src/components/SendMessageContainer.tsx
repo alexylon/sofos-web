@@ -1,4 +1,4 @@
-import React, { useEffect, useRef} from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Box, Grid, IconButton, InputAdornment, TextField, useTheme } from '@mui/material';
 import { TextareaAutosize } from '@mui/base';
 import AddCircleOutlineOutlinedIcon from '@mui/icons-material/AddCircleOutlineOutlined';
@@ -11,6 +11,22 @@ import { useMediaQuery } from 'react-responsive';
 import { useThemeMode } from '@/theme/ThemeProvider';
 import { themeColors } from '@/theme/theme';
 import { useChatContext } from '@/context/ChatContext';
+import { ICON_SIZE_MD, ICON_SIZE_SM, INPUT_FOCUS_DELAY_MS } from '@/components/utils/constants';
+import { isIOSSafari, isPWA } from '@/components/utils/platform';
+
+const VisuallyHiddenInput = styled('input')({
+	clip: 'rect(0 0 0 0)',
+	clipPath: 'inset(50%)',
+	height: 1,
+	overflow: 'hidden',
+	position: 'absolute',
+	bottom: 0,
+	left: 0,
+	whiteSpace: 'nowrap',
+	width: 1,
+});
+
+const FILE_INPUT_ID = 'file-input';
 
 const SendMessageContainer: React.FC = () => {
 	const inputRef = useRef<HTMLInputElement>(null);
@@ -43,86 +59,41 @@ const SendMessageContainer: React.FC = () => {
 		const element = inputRef.current;
 		const timeout = setTimeout(() => {
 			element.focus();
-		}, 100);
+		}, INPUT_FOCUS_DELAY_MS);
 
 		return () => clearTimeout(timeout);
 	}, [isLoading, isMobile]);
 
-	const VisuallyHiddenInput = styled('input')({
-		clip: 'rect(0 0 0 0)',
-		clipPath: 'inset(50%)',
-		height: 1,
-		overflow: 'hidden',
-		position: 'absolute',
-		bottom: 0,
-		left: 0,
-		whiteSpace: 'nowrap',
-		width: 1,
-	});
-
 	const handleButtonClick = () => {
-		document.getElementById('file-input')?.click();
+		document.getElementById(FILE_INPUT_ID)?.click();
 	};
 
 	const handleTranscriptionResult = (text: string) => {
-		console.log('SendMessageContainer handleTranscriptionResult called:', {
-			receivedText: text,
-			currentInput: input,
-			textType: typeof text,
-			textLength: text?.length || 0,
-			inputRefCurrent: inputRef.current,
-			inputRefValue: inputRef.current?.value
-		});
-
 		try {
 			const newText = input + (input ? ' ' : '') + text;
-			console.log('Updating input from:', input, 'to:', newText);
-
-			// Primary method: update through React state
 			setInput(newText);
 
-			// iOS fallback: also update the input element directly
-			const isIOSSafari = /iPad|iPhone|iPod/.test(navigator.userAgent) && /Safari/.test(navigator.userAgent);
-			const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
-						 (window.navigator as any).standalone === true;
+			if (!(isIOSSafari() || isPWA()) || !inputRef.current) return;
 
-			if ((isIOSSafari || isPWA) && inputRef.current) {
-				console.log('iOS fallback: updating input element directly');
-
-				// Focus the input first to ensure it's active
-				try {
-					inputRef.current.focus();
-				} catch (e) {
-					console.warn('Could not focus input:', e);
-				}
-
-				// Update the value
-				inputRef.current.value = newText;
-
-				// Trigger input event to ensure React picks up the change
-				const inputEvent = new Event('input', { bubbles: true });
-				inputRef.current.dispatchEvent(inputEvent);
-
-				// Also try triggering change event
-				const changeEvent = new Event('change', { bubbles: true });
-				inputRef.current.dispatchEvent(changeEvent);
-
-				// Try to trigger React's onChange handler directly if available
-				const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-					window.HTMLTextAreaElement.prototype,
-					'value'
-				)?.set;
-
-				if (nativeInputValueSetter) {
-					nativeInputValueSetter.call(inputRef.current, newText);
-					const reactEvent = new Event('input', { bubbles: true });
-					inputRef.current.dispatchEvent(reactEvent);
-				}
-
-				console.log('iOS fallback complete, input value is now:', inputRef.current.value);
+			try {
+				inputRef.current.focus();
+			} catch (focusError) {
+				console.warn('Could not focus input:', focusError);
 			}
 
-			console.log('handleInputChange called successfully');
+			inputRef.current.value = newText;
+			inputRef.current.dispatchEvent(new Event('input', { bubbles: true }));
+			inputRef.current.dispatchEvent(new Event('change', { bubbles: true }));
+
+			const nativeSetter = Object.getOwnPropertyDescriptor(
+				window.HTMLTextAreaElement.prototype,
+				'value',
+			)?.set;
+
+			if (nativeSetter) {
+				nativeSetter.call(inputRef.current, newText);
+				inputRef.current.dispatchEvent(new Event('input', { bubbles: true }));
+			}
 		} catch (error) {
 			console.error('Error in handleTranscriptionResult:', error);
 		}
@@ -130,6 +101,10 @@ const SendMessageContainer: React.FC = () => {
 
 	const handleTranscriptionError = (error: string) => {
 		console.error('Transcription error:', error);
+	};
+
+	const handleSendClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+		if (input?.trim()) onSubmit(event as unknown as React.FormEvent<HTMLFormElement>);
 	};
 
 	return (
@@ -176,17 +151,16 @@ const SendMessageContainer: React.FC = () => {
 										if (event.key === 'Enter' && !event.shiftKey) {
 											event.preventDefault();
 											if (!input?.trim()) return;
-											const formEvent = event as unknown as React.FormEvent<HTMLFormElement>;
-											onSubmit(formEvent);
+											onSubmit(event as unknown as React.FormEvent<HTMLFormElement>);
 										}
 									},
 									onWheel: (event) => event.stopPropagation(),
 								},
 								startAdornment: !isDisabled && (
 									<IconButton edge="start" onClick={handleButtonClick} disabled={false}>
-										<AddCircleOutlineOutlinedIcon sx={{ height: '26px', width: '26px', color: theme.palette.text.secondary }} />
+										<AddCircleOutlineOutlinedIcon sx={{ height: ICON_SIZE_SM, width: ICON_SIZE_SM, color: theme.palette.text.secondary }} />
 										<VisuallyHiddenInput
-											id="file-input"
+											id={FILE_INPUT_ID}
 											type="file"
 											onChange={handleFilesChange}
 											multiple
@@ -206,14 +180,12 @@ const SendMessageContainer: React.FC = () => {
 													edge="end"
 													color="primary"
 													disabled={isDisabled || !input}
-													onClick={(event: any) => {
-														if (!!input?.trim()) onSubmit(event);
-													}}
+													onClick={handleSendClick}
 												>
 													<ArrowCircleUpOutlinedIcon
 														sx={{
-															height: '30px',
-															width: '30px',
+															height: ICON_SIZE_MD,
+															width: ICON_SIZE_MD,
 														}}
 													/>
 												</IconButton>

@@ -27,12 +27,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // Detect user's preferred color scheme
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     setMode(prefersDark ? 'dark' : 'light');
     setMounted(true);
 
-    // Listen for changes to the user's preference
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const handleChange = (e: MediaQueryListEvent) => {
       setMode(e.matches ? 'dark' : 'light');

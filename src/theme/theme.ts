@@ -53,11 +53,11 @@ const lightThemeOptions: ThemeOptions = {
   palette: {
     mode: 'light',
     background: {
-      default: '#FFFFFF', // general background
+      default: '#FFFFFF',
       paper: '#F0F0F0',
     },
     text: {
-      primary: '#000000', // general text color
+      primary: '#000000',
       secondary: '#7d7d7d',
     },
     primary: {
@@ -80,16 +80,15 @@ const lightThemeOptions: ThemeOptions = {
   shape: { borderRadius: 4 },
 };
 
-// @ts-ignore
 const darkThemeOptions: ThemeOptions = {
   palette: {
     mode: 'dark',
     background: {
-      default: '#000000', // general background
+      default: '#000000',
       paper: '#2B2B2B',
     },
     text: {
-      primary: '#E6E6E6',// general text color
+      primary: '#E6E6E6',
       secondary: '#C0C0C0',
     },
     primary: {
@@ -123,12 +122,11 @@ const darkThemeOptions: ThemeOptions = {
 export const lightTheme = createTheme(lightThemeOptions);
 export const darkTheme = createTheme(darkThemeOptions);
 
-// Custom colors for messages that aren't part of MUI theme
 export const themeColors: ThemeColors = {
   light: {
-    userMessage: '#D4E2FA', // user background color
+    userMessage: '#D4E2FA',
     userText: lightThemeOptions.palette?.text?.primary,
-    assistantMessage: '#F0F0F4', // assistant bg color
+    assistantMessage: '#F0F0F4',
     errorMessage: '#eaa9a9',
     attachmentBackground: '#a9eae0',
     sendMessageContainer: '#FFFFFF',
@@ -137,12 +135,12 @@ export const themeColors: ThemeColors = {
     reasoningColor: '',
   },
   dark: {
-    userMessage: '#243240', // user background color
+    userMessage: '#243240',
     userText: darkThemeOptions.palette?.text?.primary,
-    assistantMessage: '#1D1D1F', // assistant bg color
+    assistantMessage: '#1D1D1F',
     errorMessage: '#5C2626',
     attachmentBackground: '#1A4D45',
-    sendMessageContainer: '#121212', // send message container bg color
+    sendMessageContainer: '#121212',
     inputBackground: '#1E1E1E',
     inputDisabled: '#181818',
     reasoningColor: '',

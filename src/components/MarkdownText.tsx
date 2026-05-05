@@ -1,48 +1,65 @@
-import React, { memo, useMemo, useCallback } from "react";
-import Markdown from "react-markdown";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { dracula } from "react-syntax-highlighter/dist/esm/styles/prism";
-import { AppBar, Box, Toolbar, useTheme } from "@mui/material";
-import { CopyToClipboardButton } from "@/components/CopyToClipboardButton";
-import rehypeKatex from "rehype-katex";
-import remarkMath from "remark-math";
-import "katex/dist/katex.min.css";
-import { grey } from '@/theme/theme'; // `rehype-katex` does not import the CSS for you
+import { memo, useMemo, useCallback, ReactNode, HTMLAttributes } from 'react';
+import Markdown from 'react-markdown';
+import type { Components, ExtraProps } from 'react-markdown';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { dracula } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { AppBar, Box, Toolbar, useTheme } from '@mui/material';
+import { CopyToClipboardButton } from '@/components/CopyToClipboardButton';
+import rehypeKatex from 'rehype-katex';
+import remarkMath from 'remark-math';
+import 'katex/dist/katex.min.css';
+import { grey } from '@/theme/theme';
+import { CODE_BLOCK_RADIUS } from '@/components/utils/constants';
+
+interface MarkdownTextProps {
+	children: ReactNode;
+}
 
 const MemoizedMarkdown = memo(Markdown);
 
-const MarkdownText = ({ children }: any) => {
+const MarkdownText = ({ children }: MarkdownTextProps) => {
 	const remarkPlugins = useMemo(() => [remarkMath], []);
 	const rehypePlugins = useMemo(() => [rehypeKatex], []);
 	const theme = useTheme();
 
 	const CodeBlock = useCallback(
-		function CodeBlock({ node, className, children, ...rest }: any) {
-			const match = /language-(\w+)/.exec(className || "");
-			return match ? (
+		function CodeBlock({ className, children: codeChildren, ...rest }: HTMLAttributes<HTMLElement> & ExtraProps) {
+			const match = /language-(\w+)/.exec(className || '');
+			const codeText = String(codeChildren).replace(/\n$/, '');
+
+			if (!match) {
+				return (
+					<code
+						className={className}
+						{...rest}
+						style={{ fontWeight: 'bold' }}
+					>
+						{codeChildren}
+					</code>
+				);
+			}
+
+			return (
 				<Box sx={{ mt: 3 }}>
 					<Box sx={{ flexGrow: 1 }}>
 						<AppBar
 							position="static"
 							color="primary"
 							sx={{
-								backgroundColor: "#505050",
-								borderRadius: "13px 13px 0 0",
-								zIndex: "modal",
-								mb: "-10px",
+								backgroundColor: '#505050',
+								borderRadius: CODE_BLOCK_RADIUS,
+								zIndex: 'modal',
+								mb: '-10px',
 							}}
 							elevation={0}
 						>
 							<Toolbar variant="dense">
-								<Box sx={{ display: "flex" }}>{(match && match[1]) || ""}</Box>
+								<Box sx={{ display: 'flex' }}>{match[1]}</Box>
 								<Box sx={{ flexGrow: 10 }} />
-								<Box sx={{ display: "flex", mr: -1 }}>
+								<Box sx={{ display: 'flex', mr: -1 }}>
 									<CopyToClipboardButton
-										value={String(children).replace(/\n$/, "")}
-										color={
-											theme.palette.mode === 'dark'
-												? grey[400] : grey[350]
-										}
+										value={codeText}
+										color={theme.palette.mode === 'dark' ? grey[400] : grey[350]}
 									/>
 								</Box>
 							</Toolbar>
@@ -50,40 +67,28 @@ const MarkdownText = ({ children }: any) => {
 					</Box>
 					<SyntaxHighlighter
 						style={dracula}
-						customStyle={{ borderRadius: "0 0 13px 13px" }}
+						customStyle={{ borderRadius: '0 0 13px 13px' }}
 						language={match[1]}
 						PreTag="div"
 						showLineNumbers={false}
 						codeTagProps={{
 							style: {
-								fontSize: "0.9rem",
-								fontFamily: "var(--font-mono)",
+								fontSize: '0.9rem',
+								fontFamily: 'var(--font-mono)',
 							},
 						}}
 					>
-						{String(children).replace(/\n$/, "")}
+						{codeText}
 					</SyntaxHighlighter>
 				</Box>
-			) : (
-				<code
-					className={className}
-					{...rest}
-					style={{
-						fontWeight: "bold",
-					}}
-				>
-					{children}
-				</code>
 			);
 		},
-		[]
+		[theme.palette.mode],
 	);
 
-	const components = useMemo(
-		() => ({
-			code: CodeBlock,
-		}),
-		[CodeBlock]
+	const components = useMemo<Components>(
+		() => ({ code: CodeBlock }),
+		[CodeBlock],
 	);
 
 	return (
@@ -92,7 +97,7 @@ const MarkdownText = ({ children }: any) => {
 			rehypePlugins={rehypePlugins}
 			components={components}
 		>
-			{children}
+			{typeof children === 'string' ? children : String(children ?? '')}
 		</MemoizedMarkdown>
 	);
 };
