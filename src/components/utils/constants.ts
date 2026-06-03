@@ -33,6 +33,8 @@ export const STORAGE_KEYS = {
 	CURRENT_CHAT_INDEX: 'sofosCurrentChatIndex',
 } as const;
 
+export const DEVICE_ID_HEADER = 'x-device-id';
+
 export const ANTHROPIC_THINKING_BUDGET: Record<string, number> = {
 	low: 6000,
 	medium: 12000,

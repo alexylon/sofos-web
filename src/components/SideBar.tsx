@@ -18,6 +18,7 @@ import {
 	models,
 } from '@/components/utils/constants';
 import { saveCurrentChatIndex, saveModel } from '@/components/utils/storage';
+import { clearActiveChatId } from '@/components/utils/resumeStorage';
 import { useChatContext } from '@/context/ChatContext';
 import { StoredUIMessage } from '@/types/types';
 
@@ -81,6 +82,8 @@ const SideBar = () => {
 	} = useChatContext();
 
 	const handleSelectChat = (chatIndex: number) => {
+		// Switching chats abandons any in-flight turn, so it shouldn't resume here.
+		clearActiveChatId();
 		setMessages(chatHistory[chatIndex]);
 		setCurrentChatIndex(chatIndex);
 		saveCurrentChatIndex(chatIndex);
