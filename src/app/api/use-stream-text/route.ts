@@ -1,7 +1,7 @@
 import { convertToModelMessages, createUIMessageStreamResponse, streamText, type UIMessageChunk } from 'ai';
 import { DEVICE_ID_HEADER } from '@/components/utils/constants';
 import { buildProviderConfig } from './providers';
-import { finishGeneration, publishChunk, registerGeneration, subscribe } from './streamHub';
+import { finishGeneration, publishChunk, registerGeneration, subscribe, type GenerationHandle } from './streamHub';
 
 export const runtime = 'nodejs'; // module-level hub + detached drain need a long-lived process
 export const dynamic = 'force-dynamic';
@@ -44,8 +44,8 @@ export async function POST(req: Request) {
 		// Draining server-side keeps generation alive if the client drops and
 		// buffers it for resume.
 		const [clientStream, hubStream] = uiStream.tee();
-		registerGeneration(chatId, deviceId);
-		void drainIntoHub(chatId, hubStream);
+		const generation = registerGeneration(chatId, deviceId);
+		void drainIntoHub(generation, hubStream);
 
 		return createUIMessageStreamResponse({ stream: clientStream });
 	} catch (error) {
@@ -71,19 +71,19 @@ export async function GET(req: Request) {
 	return createUIMessageStreamResponse({ stream });
 }
 
-async function drainIntoHub(chatId: string, stream: ReadableStream<UIMessageChunk>): Promise<void> {
+async function drainIntoHub(generation: GenerationHandle, stream: ReadableStream<UIMessageChunk>): Promise<void> {
 	const reader = stream.getReader();
 
 	try {
 		for (;;) {
 			const { done, value } = await reader.read();
 			if (done) break;
-			publishChunk(chatId, value);
+			publishChunk(generation, value);
 		}
 	} catch (error) {
 		console.error('Stream hub drain error:', error);
 	} finally {
-		finishGeneration(chatId);
+		finishGeneration(generation);
 		reader.releaseLock();
 	}
 }

@@ -73,7 +73,7 @@ const SideBar = () => {
 		chatHistory,
 		currentChatIndex,
 		open,
-		setMessages,
+		loadChat,
 		setChatHistory,
 		setCurrentChatIndex,
 		setModel,
@@ -84,12 +84,12 @@ const SideBar = () => {
 	const handleSelectChat = (chatIndex: number) => {
 		// Switching chats abandons any in-flight turn, so it shouldn't resume here.
 		clearActiveChatId();
-		setMessages(chatHistory[chatIndex]);
+		loadChat(chatHistory[chatIndex]);
 		setCurrentChatIndex(chatIndex);
 		saveCurrentChatIndex(chatIndex);
 
 		const lastMessage = chatHistory[chatIndex]?.at(-1) as StoredUIMessage | undefined;
-		const storedModelValue = lastMessage?.name;
+		const storedModelValue = lastMessage?.name ?? models.find(model => model.label === lastMessage?.modelId)?.value;
 		const storedModel = storedModelValue
 			? models.find(model => model.value === storedModelValue)
 			: undefined;

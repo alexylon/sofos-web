@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import type { UIMessageChunk } from 'ai';
 
 // On iOS, backgrounding the PWA tears down the client's streaming connection,
@@ -7,7 +8,13 @@ import type { UIMessageChunk } from 'ai';
 // it on reconnect. Entries are ephemeral and device-scoped, so chat history stays
 // client-side; state lives in the single Node process and is lost on restart.
 
+export interface GenerationHandle {
+	chatId: string;
+	generationId: string;
+}
+
 interface HubEntry {
+	generationId: string;
 	deviceId: string;
 	chunks: UIMessageChunk[];
 	done: boolean;
@@ -43,12 +50,22 @@ const evictIfNeeded = (): void => {
 	}
 };
 
-// Overwrites any existing entry so a new turn replaces a stale one.
-export const registerGeneration = (chatId: string, deviceId: string): void => {
+// Overwrites any existing entry so a new turn replaces a stale one. A private
+// generation id prevents an older detached drain from publishing into, or
+// finishing, the replacement entry after the map key is reused.
+export const registerGeneration = (chatId: string, deviceId: string): GenerationHandle => {
 	const existing = store.get(chatId);
 	if (existing?.evictTimer) clearTimeout(existing.evictTimer);
+	if (existing) {
+		existing.done = true;
+		existing.listeners.forEach(listener => listener(null));
+		existing.listeners.clear();
+	}
+
+	const generationId = randomUUID();
 
 	store.set(chatId, {
+		generationId,
 		deviceId,
 		chunks: [],
 		done: false,
@@ -57,22 +74,28 @@ export const registerGeneration = (chatId: string, deviceId: string): void => {
 	});
 
 	evictIfNeeded();
+	return { chatId, generationId };
 };
 
-export const publishChunk = (chatId: string, chunk: UIMessageChunk): void => {
-	const entry = store.get(chatId);
+const getCurrentEntry = (handle: GenerationHandle): HubEntry | undefined => {
+	const entry = store.get(handle.chatId);
+	return entry?.generationId === handle.generationId ? entry : undefined;
+};
+
+export const publishChunk = (handle: GenerationHandle, chunk: UIMessageChunk): void => {
+	const entry = getCurrentEntry(handle);
 	if (!entry) return;
 	entry.chunks.push(chunk);
 	entry.listeners.forEach(listener => listener(chunk));
 };
 
-export const finishGeneration = (chatId: string): void => {
-	const entry = store.get(chatId);
+export const finishGeneration = (handle: GenerationHandle): void => {
+	const entry = getCurrentEntry(handle);
 	if (!entry) return;
 	entry.done = true;
 	entry.listeners.forEach(listener => listener(null));
 	entry.listeners.clear();
-	entry.evictTimer = setTimeout(() => store.delete(chatId), RESUME_TTL_MS);
+	entry.evictTimer = setTimeout(() => store.delete(handle.chatId), RESUME_TTL_MS);
 };
 
 // Replays buffered chunks, then tails live ones until done. Null when there is

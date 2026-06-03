@@ -19,6 +19,7 @@ import {
 const NEW_CHAT_INDEX = -1;
 
 export interface FinishFlags {
+	isAbort?: boolean;
 	isDisconnect?: boolean;
 	isError?: boolean;
 }
@@ -177,9 +178,10 @@ export const useChatPersistence = ({
 	}, [writeCurrentChat]);
 
 	const onFinishCallback = useCallback((message: UIMessage, flags?: FinishFlags) => {
-		// A dropped connection or hard error leaves a partial message; keep the slot
-		// at the user message so the turn can resume rather than saving a partial.
-		if (flags?.isDisconnect || flags?.isError) return;
+		// A dropped connection, hard error, or abandoned chat switch leaves a partial
+		// message; keep the slot at the user message so the turn can resume or be
+		// abandoned without corrupting another selected chat.
+		if (flags?.isAbort || flags?.isDisconnect || flags?.isError) return;
 
 		const stored = message as StoredUIMessage;
 		stored.createdAt = new Date();

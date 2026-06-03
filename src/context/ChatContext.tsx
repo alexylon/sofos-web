@@ -50,6 +50,7 @@ interface ChatContextType {
 	setCurrentChatIndex: React.Dispatch<React.SetStateAction<number>>;
 	setInput: React.Dispatch<React.SetStateAction<string>>;
 
+	loadChat: (messages: UIMessage[]) => void;
 	handleModelChange: (event: SelectChangeEvent<string | number>) => void;
 	handleReasoningEffortChange: (event: SelectChangeEvent<string | number>) => void;
 	handleTextVerbosityChange: (event: SelectChangeEvent<string | number>) => void;
@@ -87,8 +88,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 	const scrollContainerRef = useRef<HTMLDivElement>(null);
 
 	// Seed from a previous load's interrupted turn so resume targets that
-	// generation; otherwise a fresh id.
-	const [chatId] = useState<string>(() => getActiveChatId() ?? newChatId());
+	// generation; otherwise a fresh id. This is stateful so switching chats can
+	// detach any old in-flight useChat instance instead of letting it mutate the
+	// newly selected chat.
+	const [chatId, setChatId] = useState<string>(() => getActiveChatId() ?? newChatId());
+	const pendingSessionMessagesRef = useRef<UIMessage[] | null>(null);
 
 	const transport = useMemo(
 		() =>
@@ -119,13 +123,14 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 		clearError,
 	} = useChat({
 		id: chatId,
+		messages: pendingSessionMessagesRef.current ?? undefined,
 		transport,
 		// Keep the active id while a turn might still be resumable (any interrupted
 		// stream — iOS reports backgrounding inconsistently as error or disconnect);
 		// a clean finish or user abort clears it.
-		onFinish: ({ message, isDisconnect, isError }) => {
+		onFinish: ({ message, isAbort, isDisconnect, isError }) => {
 			if (!isError && !isDisconnect) clearActiveChatId();
-			persistence.onFinishCallback(message, { isDisconnect, isError });
+			persistence.onFinishCallback(message, { isAbort, isDisconnect, isError });
 		},
 		experimental_throttle: STREAM_THROTTLE_MS,
 	});
@@ -154,6 +159,23 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 		prevStatusRef.current = status;
 	}, [status]);
+
+	useEffect(() => {
+		const pendingMessages = pendingSessionMessagesRef.current;
+		if (!pendingMessages) return;
+
+		pendingSessionMessagesRef.current = null;
+		setMessages(pendingMessages);
+	}, [chatId, setMessages]);
+
+	const resetChatSession = useCallback((nextMessages: UIMessage[]) => {
+		void stop();
+		clearError();
+		clearActiveChatId();
+		inFlightRef.current = false;
+		pendingSessionMessagesRef.current = nextMessages;
+		setChatId(newChatId());
+	}, [clearError, stop]);
 
 	// Latest error, read inside the deferred resume checks below.
 	const errorRef = useRef(error);
@@ -220,6 +242,14 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 	const handleDrawerOpen = useCallback(() => setOpen(true), []);
 	const handleDrawerClose = useCallback(() => setOpen(false), []);
+	const handleStartNewChat = useCallback(() => {
+		resetChatSession([]);
+		persistence.handleStartNewChat();
+	}, [persistence, resetChatSession]);
+
+	const loadChat = useCallback((nextMessages: UIMessage[]) => {
+		resetChatSession(nextMessages);
+	}, [resetChatSession]);
 
 	const scrollToBottom = useCallback(() => {
 		const container = scrollContainerRef.current;
@@ -295,12 +325,13 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 		setChatHistory: persistence.setChatHistory,
 		setCurrentChatIndex: persistence.setCurrentChatIndex,
 		setInput,
+		loadChat,
 		handleModelChange: modelSettings.handleModelChange,
 		handleReasoningEffortChange: modelSettings.handleReasoningEffortChange,
 		handleTextVerbosityChange: modelSettings.handleTextVerbosityChange,
 		handleDrawerOpen,
 		handleDrawerClose,
-		handleStartNewChat: persistence.handleStartNewChat,
+		handleStartNewChat,
 		handleFilesChange: fileUploads.handleFilesChange,
 		handleRemoveImage: fileUploads.handleRemoveImage,
 		handleRemoveFile: fileUploads.handleRemoveFile,
