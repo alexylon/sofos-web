@@ -3,7 +3,6 @@ import { anthropic, AnthropicProviderOptions } from '@ai-sdk/anthropic';
 import { google, GoogleGenerativeAIProviderOptions } from '@ai-sdk/google';
 import { LanguageModel, ModelMessage, SystemModelMessage, ToolSet } from 'ai';
 import { SharedV2ProviderOptions } from '@ai-sdk/provider';
-import { ANTHROPIC_THINKING_BUDGET } from '@/components/utils/constants';
 import { AnthropicEffortValue, Provider } from '@/types/types';
 import { SYSTEM_PROMPT } from './systemPrompt';
 
@@ -27,16 +26,12 @@ export interface BuilderOutput {
 }
 
 const buildAnthropic = ({ modelValue, reasoningEffort, promptMessages }: BuilderInput): BuilderOutput => {
-	const isOpus = modelValue.startsWith('claude-opus');
-
 	const anthropicOptions: AnthropicProviderOptions = reasoningEffort === 'none'
 		? { thinking: { type: 'disabled' } }
-		: isOpus
-			? {
+		: {
 				thinking: { type: 'adaptive', display: 'summarized' },
 				effort: reasoningEffort as AnthropicEffortValue,
-			}
-			: { thinking: { type: 'enabled', budgetTokens: ANTHROPIC_THINKING_BUDGET[reasoningEffort] ?? 0 } };
+			};
 
 	// 1h breakpoint on the static system prompt + 5m rolling breakpoint on the
 	// last message so the cached prefix grows with the conversation. The SDK

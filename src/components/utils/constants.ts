@@ -35,12 +35,6 @@ export const STORAGE_KEYS = {
 
 export const DEVICE_ID_HEADER = 'x-device-id';
 
-export const ANTHROPIC_THINKING_BUDGET: Record<string, number> = {
-	low: 6000,
-	medium: 12000,
-	high: 24000,
-};
-
 export const models: Model[] = [
 	{
 		value: 'gpt-5.5',
@@ -67,8 +61,14 @@ export const models: Model[] = [
 		type: ModelType.REASONING,
 	},
 	{
-		value: 'claude-opus-4-7',
-		label: 'Claude Opus 4.7',
+		value: 'claude-opus-4-8',
+		label: 'Claude Opus 4.8',
+		provider: Provider.Anthropic,
+		type: ModelType.REASONING,
+	},
+	{
+		value: 'claude-fable-5',
+		label: 'Claude Fable 5',
 		provider: Provider.Anthropic,
 		type: ModelType.REASONING,
 	},
