@@ -151,6 +151,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 	const inFlightRef = useRef(false);
 	const prevStatusRef = useRef(status);
 
+	// Hides the dropped-fetch error while the foreground resume checks run, so it
+	// can't flash before the reply is rebuilt.
+	const [resumePending, setResumePending] = useState(false);
+	const resumeAttemptRef = useRef(0);
+
 	useEffect(() => {
 		if (status === Status.READY
 			&& (prevStatusRef.current === Status.STREAMING || prevStatusRef.current === Status.SUBMITTED)) {
@@ -173,6 +178,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 		clearError();
 		clearActiveChatId();
 		inFlightRef.current = false;
+		resumeAttemptRef.current++;
+		setResumePending(false);
 		pendingSessionMessagesRef.current = nextMessages;
 		setChatId(newChatId());
 	}, [clearError, stop]);
@@ -192,19 +199,32 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 	// fetch surfaces as an error, rebuild from the server buffer — dropping the
 	// trailing partial first so the replay doesn't duplicate it. Firing only on a
 	// return event leaves a healthy stream and a genuine foreground error untouched,
-	// and stops a replayed error looping (no new return means no retry).
+	// and stops a replayed error looping (no new return means no retry). The attempt
+	// counter invalidates checks left over from an earlier foreground event.
 	useEffect(() => {
 		const onForeground = () => {
 			if (document.visibilityState !== 'visible') return;
 			if (!inFlightRef.current || !getActiveChatId()) return;
 
+			const attempt = ++resumeAttemptRef.current;
 			let handled = false;
+			let remaining = STREAM_RESUME_RETRY_MS.length;
+			setResumePending(true);
 
 			STREAM_RESUME_RETRY_MS.forEach(delay => setTimeout(() => {
-				if (handled || document.visibilityState !== 'visible') return;
-				if (!errorRef.current || !inFlightRef.current || !getActiveChatId()) return;
+				if (handled || attempt !== resumeAttemptRef.current) return;
+				remaining--;
+
+				const canResume = document.visibilityState === 'visible'
+					&& errorRef.current && inFlightRef.current && getActiveChatId();
+
+				if (!canResume) {
+					if (remaining === 0) setResumePending(false);
+					return;
+				}
 
 				handled = true;
+				setResumePending(false);
 				setMessages(prev =>
 					prev.length > 0 && prev[prev.length - 1].role === 'assistant' ? prev.slice(0, -1) : prev,
 				);
@@ -312,7 +332,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 		input,
 		messages,
 		status,
-		error,
+		// Hidden only for display; isDisabled above still uses the raw error.
+		error: resumePending ? undefined : error,
 		isLoading,
 		isDisabled,
 		hasImages: fileUploads.hasImages,
