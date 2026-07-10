@@ -37,26 +37,26 @@ export const DEVICE_ID_HEADER = 'x-device-id';
 
 export const models: Model[] = [
 	{
-		value: 'gpt-5.5',
-		label: 'GPT-5.5',
+		value: 'gpt-5.6-sol',
+		label: 'GPT-5.6 Sol',
 		provider: Provider.OpenAI,
 		type: ModelType.REASONING,
 	},
 	{
-		value: 'gpt-5.3-codex',
-		label: 'GPT-5.3 Codex',
+		value: 'gpt-5.6-terra',
+		label: 'GPT-5.6 Terra',
 		provider: Provider.OpenAI,
 		type: ModelType.REASONING,
 	},
 	{
-		value: 'gpt-5-mini',
-		label: 'GPT-5 mini',
+		value: 'gpt-5.6-luna',
+		label: 'GPT-5.6 Luna',
 		provider: Provider.OpenAI,
 		type: ModelType.REASONING,
 	},
 	{
-		value: 'claude-sonnet-5',
-		label: 'Claude Sonnet 5',
+		value: 'claude-fable-5',
+		label: 'Claude Fable 5',
 		provider: Provider.Anthropic,
 		type: ModelType.REASONING,
 	},
@@ -67,12 +67,11 @@ export const models: Model[] = [
 		type: ModelType.REASONING,
 	},
 	{
-		value: 'claude-fable-5',
-		label: 'Claude Fable 5',
+		value: 'claude-sonnet-5',
+		label: 'Claude Sonnet 5',
 		provider: Provider.Anthropic,
 		type: ModelType.REASONING,
-	},
-	{
+	}, {
 		value: 'gemini-3.1-pro-preview',
 		label: 'Gemini 3.1 Pro',
 		provider: Provider.Google,
@@ -85,6 +84,8 @@ export const reasoningEfforts: ReasoningEffort[] = [
 	{ value: 'low', label: 'Low' },
 	{ value: 'medium', label: 'Medium' },
 	{ value: 'high', label: 'High' },
+	{ value: 'xhigh', label: 'xHigh' },
+	{ value: 'max', label: 'Max' },
 ];
 
 export const getReasoningEfforts = (hasNoneEffort: boolean): ReasoningEffort[] => {

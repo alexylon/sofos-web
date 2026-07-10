@@ -24,7 +24,7 @@ export interface ReasoningEffort {
 	label: string;
 }
 
-export type ReasoningEffortValue = "none" | "low" | "medium" | "high";
+export type ReasoningEffortValue = "none" | "low" | "medium" | "high" | "xhigh" | "max";
 
 export type AnthropicEffortValue = Exclude<ReasoningEffortValue, "none">;
 
