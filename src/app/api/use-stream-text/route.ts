@@ -1,5 +1,6 @@
 import { convertToModelMessages, createUIMessageStreamResponse, streamText, type UIMessageChunk } from 'ai';
 import { DEVICE_ID_HEADER } from '@/components/utils/constants';
+import { stripCitationsFromHistory } from '@/components/utils/citations';
 import { buildProviderConfig } from './providers';
 import { finishGeneration, publishChunk, registerGeneration, subscribe, type GenerationHandle } from './streamHub';
 
@@ -10,7 +11,9 @@ export const maxDuration = 60;
 export async function POST(req: Request) {
 	const { messages, model, reasoningEffort, textVerbosity, id: chatId } = await req.json();
 	const deviceId = req.headers.get(DEVICE_ID_HEADER) ?? '';
-	const promptMessages = await convertToModelMessages(messages);
+	// Past answers still carry the markers, and sending them back teaches the
+	// model to keep writing them.
+	const promptMessages = stripCitationsFromHistory(await convertToModelMessages(messages));
 
 	const config = buildProviderConfig(model.provider, {
 		modelValue: model.value,

@@ -1,4 +1,5 @@
 import type { UIMessage } from '@ai-sdk/react';
+import { stripCitationMarkup } from '@/components/utils/citations';
 
 type Part = UIMessage['parts'][number];
 
@@ -15,6 +16,13 @@ export const getMessageText = (parts: UIMessage['parts']): string | undefined =>
 	const textParts = parts.filter(part => part.type === 'text');
 	if (textParts.length === 0) return undefined;
 	return textParts.map(p => p.text).join('');
+};
+
+// Only answers get cleaned up. What the user typed is shown back untouched,
+// even when they paste a reply that has the markers in it.
+export const getAssistantText = (parts: UIMessage['parts']): string | undefined => {
+	const text = getMessageText(parts);
+	return text === undefined ? undefined : stripCitationMarkup(text);
 };
 
 export const getReasoningTitle = (text: string | undefined): string => {

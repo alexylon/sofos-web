@@ -7,7 +7,7 @@ import { useThemeMode } from '@/theme/ThemeProvider';
 import { themeColors } from '@/theme/theme';
 import { StoredUIMessage } from '@/types/types';
 import {
-	getMessageText,
+	getAssistantText,
 	getReasoningTitleFromMessage,
 } from '@/components/messages/messageParts';
 
@@ -25,7 +25,7 @@ export const AssistantMessage = ({ message, isLoading, isStreamingThisMessage }:
 	const theme = useTheme();
 	const colors = themeColors[mode];
 
-	const text = getMessageText(message.parts);
+	const text = getAssistantText(message.parts);
 	const reasoningTitle = getReasoningTitleFromMessage(message.parts);
 	const modelId = (message as StoredUIMessage).modelId;
 
