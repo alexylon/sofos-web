@@ -52,18 +52,18 @@ Then navigate to http://localhost:3000 in your browser
   docker build -t docker-username/docker-hub-repository:tag .
 ```
 
-3. Once the image has been built, run the container, assign it a name and map app host's port 3000 to the container's port 3000:
+3. Once the image has been built, run the container, assign it a name and map app host's port 3333 to the container's port 3333:
 
 ```bash
-  docker run -d -p 3000:3000 --name sofos-docker --env-file .env.local docker-username/docker-hub-repository:tag
+  docker run -d -p 3333:3333 --name sofos-docker --env-file .env.local docker-username/docker-hub-repository:tag
 ```
 
-4. Open your browser and navigate to http://localhost:3000.
+4. Open your browser and navigate to http://localhost:3333.
 
 If you need hot reloading for development, remember to mount your working directory as a volume:
 
 ```bash
-  docker run -p 3000:3000 --name sofos-docker -v "$(pwd):/app" --env-file .env.local docker-username/docker-hub-repository:tag
+  docker run -p 3333:3333 --name sofos-docker -v "$(pwd):/app" --env-file .env.local docker-username/docker-hub-repository:tag
 ```
 
 5. Push the image to your Docker Hub repository

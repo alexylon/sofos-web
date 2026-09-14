@@ -27,8 +27,9 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 
-# Expose the port your app listens on
-EXPOSE 3000
+# Expose the port your app listens on. The standalone server binds $PORT.
+ENV PORT=3333
+EXPOSE 3333
 
 # Start the standalone server
 CMD ["node", "server.js"]
