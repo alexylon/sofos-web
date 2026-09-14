@@ -37,6 +37,12 @@ export const DEVICE_ID_HEADER = 'x-device-id';
 
 export const models: Model[] = [
 	{
+		value: 'gpt-6-astra',
+		label: 'GPT-6 Astra',
+		provider: Provider.OpenAI,
+		type: ModelType.REASONING,
+	},
+	{
 		value: 'gpt-5.6-sol',
 		label: 'GPT-5.6 Sol',
 		provider: Provider.OpenAI,
@@ -55,8 +61,8 @@ export const models: Model[] = [
 		type: ModelType.REASONING,
 	},
 	{
-		value: 'claude-fable-5',
-		label: 'Claude Fable 5',
+		value: 'claude-fable-5-1',
+		label: 'Claude Fable 5.1',
 		provider: Provider.Anthropic,
 		type: ModelType.REASONING,
 	},
