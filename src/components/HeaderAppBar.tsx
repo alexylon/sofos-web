@@ -30,6 +30,7 @@ export default function HeaderAppBar() {
 		handleTextVerbosityChange,
 		handleDrawerOpen,
 		handleStartNewChat,
+		handleClearJev,
 	} = useChatContext();
 
 	const isJev = isJevModel(model);
@@ -89,23 +90,21 @@ export default function HeaderAppBar() {
 												disabled={isDisabled}
 											/>
 										}
-										{!isJev &&
-											<Box sx={{
-												ml: 'auto',
-												display: 'flex',
-												...(isSmallScreen && { mr: -1 }),
-											}}>
-												<IconButton onClick={() => handleStartNewChat()}>
-													<MapsUgcOutlinedIcon
-														sx={{
-															height: ICON_SIZE_SM,
-															width: ICON_SIZE_SM,
-															color: 'white',
-														}}
-													/>
-												</IconButton>
-											</Box>
-										}
+										<Box sx={{
+											ml: 'auto',
+											display: 'flex',
+											...(isSmallScreen && { mr: -1 }),
+										}}>
+											<IconButton onClick={() => (isJev ? handleClearJev() : handleStartNewChat())}>
+												<MapsUgcOutlinedIcon
+													sx={{
+														height: ICON_SIZE_SM,
+														width: ICON_SIZE_SM,
+														color: 'white',
+													}}
+												/>
+											</IconButton>
+										</Box>
 									</>
 								)
 								: (

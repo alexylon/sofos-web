@@ -27,7 +27,13 @@ if [ ! -f ".env.local" ]; then
     exit 1
 fi
 
-if ! docker info > /dev/null 2>&1; then
+if ! docker_error=$(docker info 2>&1 > /dev/null); then
+    # Only Docker Desktop on macOS can be started from here. On Linux Docker runs
+    # as a system service, so show why it can't be reached instead.
+    if [ "$(uname)" != "Darwin" ]; then
+        print_error "Can't reach Docker: $docker_error"
+        exit 1
+    fi
     print_status "Docker is not running. Starting Docker Desktop..."
     open -a Docker
     print_status "Waiting for Docker to start..."

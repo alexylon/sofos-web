@@ -31,6 +31,7 @@ interface ChatContextType {
 	files: File[];
 	chatHistory: UIMessage[][];
 	currentChatIndex: number;
+	jevKey: number;
 	open: boolean;
 	input: string;
 	messages: UIMessage[];
@@ -57,6 +58,7 @@ interface ChatContextType {
 	handleDrawerOpen: () => void;
 	handleDrawerClose: () => void;
 	handleStartNewChat: () => void;
+	handleClearJev: () => void;
 	handleFilesChange: (event: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
 	handleRemoveImage: (index: number) => void;
 	handleRemoveFile: (index: number) => void;
@@ -266,6 +268,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 		persistence.handleStartNewChat();
 	}, [persistence, resetChatSession]);
 
+	// Used as the Jev screen's key. Changing it remounts the screen, which clears
+	// the form and the answer, including one still loading. The chat is untouched.
+	const [jevKey, setJevKey] = useState(0);
+	const handleClearJev = useCallback(() => setJevKey(key => key + 1), []);
+
 	const loadChat = useCallback((nextMessages: UIMessage[]) => {
 		resetChatSession(nextMessages);
 	}, [resetChatSession]);
@@ -327,6 +334,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 		files: fileUploads.files,
 		chatHistory: persistence.chatHistory,
 		currentChatIndex: persistence.currentChatIndex,
+		jevKey,
 		open,
 		input,
 		messages,
@@ -352,6 +360,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 		handleDrawerOpen,
 		handleDrawerClose,
 		handleStartNewChat,
+		handleClearJev,
 		handleFilesChange: fileUploads.handleFilesChange,
 		handleRemoveImage: fileUploads.handleRemoveImage,
 		handleRemoveFile: fileUploads.handleRemoveFile,

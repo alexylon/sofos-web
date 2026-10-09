@@ -20,6 +20,7 @@ const Chat: React.FC = () => {
 
 	const {
 		model,
+		jevKey,
 		scrollToBottom,
 		handleDrawerClose,
 	} = useChatContext();
@@ -36,7 +37,7 @@ const Chat: React.FC = () => {
 			<HeaderAppBar />
 			{user && hasOpenedJev && (
 				<Box sx={{ display: isJev ? undefined : 'none' }}>
-					<JevScreen />
+					<JevScreen key={jevKey} />
 				</Box>
 			)}
 			{user && !isJev && (
