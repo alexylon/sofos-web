@@ -43,8 +43,8 @@ export const models: Model[] = [
 		type: ModelType.REASONING,
 	},
 	{
-		value: 'gpt-5.6-sol',
-		label: 'GPT-5.6 Sol',
+		value: 'gpt-6.1-sol',
+		label: 'GPT-6.1 Sol',
 		provider: Provider.OpenAI,
 		type: ModelType.REASONING,
 	},
@@ -55,8 +55,8 @@ export const models: Model[] = [
 		type: ModelType.REASONING,
 	},
 	{
-		value: 'gpt-5.6-luna',
-		label: 'GPT-5.6 Luna',
+		value: 'gpt-6-luna',
+		label: 'GPT-6 Luna',
 		provider: Provider.OpenAI,
 		type: ModelType.REASONING,
 	},
@@ -67,14 +67,14 @@ export const models: Model[] = [
 		type: ModelType.REASONING,
 	},
 	{
-		value: 'claude-opus-5',
-		label: 'Claude Opus 5',
+		value: 'claude-opus-5-5',
+		label: 'Claude Opus 5.5',
 		provider: Provider.Anthropic,
 		type: ModelType.REASONING,
 	},
 	{
-		value: 'claude-sonnet-5',
-		label: 'Claude Sonnet 5',
+		value: 'claude-sonnet-5-5',
+		label: 'Claude Sonnet 5.5',
 		provider: Provider.Anthropic,
 		type: ModelType.REASONING,
 	}, {
