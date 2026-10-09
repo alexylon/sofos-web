@@ -35,6 +35,18 @@ export const STORAGE_KEYS = {
 
 export const DEVICE_ID_HEADER = 'x-device-id';
 
+// Height of the area below the header, shared by the chat and Jev screens.
+export const SCREEN_HEIGHT = {
+	xs: 'calc(91vh - 60px)',
+	sm: 'calc(94vh - 60px)',
+};
+
+export const HIDDEN_SCROLLBAR = {
+	scrollbarWidth: 'none',
+	msOverflowStyle: 'none',
+	'&::-webkit-scrollbar': { display: 'none' },
+} as const;
+
 export const models: Model[] = [
 	{
 		value: 'gpt-6-astra',
@@ -83,7 +95,16 @@ export const models: Model[] = [
 		provider: Provider.Google,
 		type: ModelType.REASONING,
 	},
+	{
+		value: 'jev-latest',
+		label: 'Jev',
+		provider: Provider.TypeSafe,
+		type: ModelType.STANDARD,
+	},
 ];
+
+// Jev has its own screen instead of a chat.
+export const isJevModel = (model: Model): boolean => model.provider === Provider.TypeSafe;
 
 export const reasoningEfforts: ReasoningEffort[] = [
 	{ value: 'none', label: 'None' },

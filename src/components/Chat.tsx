@@ -1,15 +1,17 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Box from '@mui/material/Box';
 import { IconButton, useTheme } from '@mui/material';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import HeaderAppBar from '@/components/HeaderAppBar';
 import MessagesContainer from '@/components/MessagesContainer';
 import SendMessageContainer from '@/components/SendMessageContainer';
+import JevScreen from '@/components/jev/JevScreen';
 import { useSession } from 'next-auth/react';
 import { grey } from '@/theme/theme';
 import { useChatContext } from '@/context/ChatContext';
+import { isJevModel, SCREEN_HEIGHT } from '@/components/utils/constants';
 
 const Chat: React.FC = () => {
 	const { data: session } = useSession();
@@ -17,14 +19,27 @@ const Chat: React.FC = () => {
 	const theme = useTheme();
 
 	const {
+		model,
 		scrollToBottom,
 		handleDrawerClose,
 	} = useChatContext();
 
+	const isJev = isJevModel(model);
+
+	// Once opened, Jev stays mounted (hidden while another model is selected), so
+	// its form and any pending answer survive switching models.
+	const [hasOpenedJev, setHasOpenedJev] = useState(isJev);
+	if (isJev && !hasOpenedJev) setHasOpenedJev(true);
+
 	return (
 		<div onClick={handleDrawerClose}>
 			<HeaderAppBar />
-			{user && (
+			{user && hasOpenedJev && (
+				<Box sx={{ display: isJev ? undefined : 'none' }}>
+					<JevScreen />
+				</Box>
+			)}
+			{user && !isJev && (
 				<Box
 					className="chatContainer chat-area"
 					sx={{
@@ -37,10 +52,7 @@ const Chat: React.FC = () => {
 						overflow: 'hidden',
 						mt: '40px',
 						pb: 5,
-						height: {
-							xs: 'calc(91vh - 60px)',
-							sm: 'calc(94vh - 60px)',
-						},
+						height: SCREEN_HEIGHT,
 						position: 'relative',
 					}}
 				>

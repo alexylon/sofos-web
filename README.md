@@ -6,7 +6,7 @@ A multimodal AI chatbot built with the Vercel AI SDK, React (TypeScript), Next.j
 
 It can read incoming messages, convert speech to text, and analyze multiple images at the same time.
 
-Supports OpenAI, Anthropic, and Google models and their API keys.
+Supports OpenAI, Anthropic, Google, and TypeSafe models and their API keys.
 
 <br/>
 
@@ -25,6 +25,8 @@ Supports OpenAI, Anthropic, and Google models and their API keys.
 `ANTHROPIC_API_KEY` - go to https://docs.anthropic.com/en/api/getting-started
 
 `GOOGLE_GENERATIVE_AI_API_KEY` - go to https://aistudio.google.com/apikey
+
+`TYPESAFE_API_KEY` - go to https://console.typesafe.ai/keys
 
 `GITHUB_ID` - go to GitHub -> Settings -> Developer Settings -> OAuth Apps -> New OAuth App
 

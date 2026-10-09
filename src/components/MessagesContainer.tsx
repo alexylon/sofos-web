@@ -1,6 +1,7 @@
 import { Box, Grid, Typography } from '@mui/material';
 import Completion from '@/components/Completion';
 import { useChatContext } from '@/context/ChatContext';
+import { HIDDEN_SCROLLBAR } from '@/components/utils/constants';
 import { ChatStatus } from 'ai';
 
 const MessagesContainer = () => {
@@ -40,11 +41,7 @@ const MessagesContainer = () => {
 						},
 					overflow: 'auto',
 					width: '100%',
-					'&::-webkit-scrollbar': {
-						display: 'none',
-					},
-					scrollbarWidth: 'none',
-					msOverflowStyle: 'none',
+					...HIDDEN_SCROLLBAR,
 				}}
 			>
 				{messages.length

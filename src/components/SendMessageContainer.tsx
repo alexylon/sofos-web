@@ -13,6 +13,7 @@ import { themeColors } from '@/theme/theme';
 import { useChatContext } from '@/context/ChatContext';
 import { ICON_SIZE_MD, ICON_SIZE_SM, INPUT_FOCUS_DELAY_MS } from '@/components/utils/constants';
 import { isIOSSafari, isPWA } from '@/components/utils/platform';
+import { isSendKey } from '@/components/utils/keyboard';
 
 const VisuallyHiddenInput = styled('input')({
 	clip: 'rect(0 0 0 0)',
@@ -148,7 +149,7 @@ const SendMessageContainer: React.FC = () => {
 									maxRows: 10,
 									style: { resize: 'none', fontFamily: "'SF Pro Text BG', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" },
 									onKeyDown: (event) => {
-										if (event.key === 'Enter' && !event.shiftKey) {
+										if (isSendKey(event)) {
 											event.preventDefault();
 											if (!input?.trim()) return;
 											onSubmit(event as unknown as React.FormEvent<HTMLFormElement>);

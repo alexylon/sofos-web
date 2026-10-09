@@ -14,6 +14,7 @@ import ClearIcon from '@mui/icons-material/Clear';
 import Box from '@mui/material/Box';
 import {
 	ICON_SIZE_SM,
+	isJevModel,
 	MAX_PERSISTED_CHATS,
 	models,
 } from '@/components/utils/constants';
@@ -73,6 +74,7 @@ const SideBar = () => {
 		chatHistory,
 		currentChatIndex,
 		open,
+		model: currentModel,
 		loadChat,
 		setChatHistory,
 		setCurrentChatIndex,
@@ -94,9 +96,14 @@ const SideBar = () => {
 			? models.find(model => model.value === storedModelValue)
 			: undefined;
 
-		if (storedModel) {
-			setModel(storedModel);
-			saveModel(storedModel.value);
+		// Jev has no chat view. A chat Jev answered before it had its own screen, or a
+		// chat whose model was removed opened while on Jev, uses the first chat model.
+		const chatModel = storedModel && !isJevModel(storedModel) ? storedModel : undefined;
+		const nextModel = chatModel ?? (isJevModel(currentModel) ? models.find(model => !isJevModel(model)) : undefined);
+
+		if (nextModel) {
+			setModel(nextModel);
+			saveModel(nextModel.value);
 		}
 	};
 

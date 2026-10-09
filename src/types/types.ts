@@ -17,7 +17,27 @@ export enum Provider {
 	OpenAI = "openai",
 	Anthropic = "anthropic",
 	Google = "google",
+	TypeSafe = "typesafe",
 }
+
+export type JevQuestionType = "noul" | "choice" | "score";
+
+export interface JevQuestion {
+	type: JevQuestionType;
+	instructions: string;
+	criteria?: Record<string, null> | string[];
+}
+
+export type JevAnswer =
+	| { type: "noul"; noul: number }
+	| { type: "choice"; choice: string; probabilities: Record<string, number>; confidence: number }
+	| {
+		type: "score";
+		score: number;
+		legend: Record<string, string>;
+		probabilities: Record<string, number>;
+		confidence: number;
+	};
 
 export interface ReasoningEffort {
 	value: ReasoningEffortValue;

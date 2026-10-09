@@ -6,7 +6,8 @@ import { signIn, useSession } from 'next-auth/react';
 import SelectSmall from '@/components/SelectSmall';
 import SideBar from '@/components/SideBar';
 import { useChatContext } from '@/context/ChatContext';
-import { ICON_SIZE_SM, models, textVerbosities } from '@/components/utils/constants';
+import { ICON_SIZE_SM, isJevModel, models, textVerbosities } from '@/components/utils/constants';
+import { ModelType } from '@/types/types';
 
 const SMALL_SCREEN_BREAKPOINT_PX = 420;
 
@@ -30,6 +31,8 @@ export default function HeaderAppBar() {
 		handleDrawerOpen,
 		handleStartNewChat,
 	} = useChatContext();
+
+	const isJev = isJevModel(model);
 
 	const selectMargin = (small: string, regular: string) =>
 		({ marginRight: isSmallScreen ? small : regular });
@@ -68,13 +71,15 @@ export default function HeaderAppBar() {
 											style={selectMargin('0', '7px')}
 											disabled={isDisabled}
 										/>
-										<SelectSmall
-											options={updatedReasoningEfforts}
-											handleChange={handleReasoningEffortChange}
-											value={reasoningEffort}
-											style={selectMargin('0', '7px')}
-											disabled={isDisabled}
-										/>
+										{model.type !== ModelType.STANDARD &&
+											<SelectSmall
+												options={updatedReasoningEfforts}
+												handleChange={handleReasoningEffortChange}
+												value={reasoningEffort}
+												style={selectMargin('0', '7px')}
+												disabled={isDisabled}
+											/>
+										}
 										{model.value.startsWith('gpt-5') &&
 											<SelectSmall
 												options={textVerbosities}
@@ -84,21 +89,23 @@ export default function HeaderAppBar() {
 												disabled={isDisabled}
 											/>
 										}
-										<Box sx={{
-											ml: 'auto',
-											display: 'flex',
-											...(isSmallScreen && { mr: -1 }),
-										}}>
-											<IconButton onClick={() => handleStartNewChat()}>
-												<MapsUgcOutlinedIcon
-													sx={{
-														height: ICON_SIZE_SM,
-														width: ICON_SIZE_SM,
-														color: 'white',
-													}}
-												/>
-											</IconButton>
-										</Box>
+										{!isJev &&
+											<Box sx={{
+												ml: 'auto',
+												display: 'flex',
+												...(isSmallScreen && { mr: -1 }),
+											}}>
+												<IconButton onClick={() => handleStartNewChat()}>
+													<MapsUgcOutlinedIcon
+														sx={{
+															height: ICON_SIZE_SM,
+															width: ICON_SIZE_SM,
+															color: 'white',
+														}}
+													/>
+												</IconButton>
+											</Box>
+										}
 									</>
 								)
 								: (
