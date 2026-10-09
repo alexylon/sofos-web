@@ -1,13 +1,18 @@
 import { convertToModelMessages, createUIMessageStreamResponse, streamText, type UIMessageChunk } from 'ai';
+import type { NextRequest } from 'next/server';
+import { requireAllowedUser } from '@/app/api/auth/allowedUser';
 import { DEVICE_ID_HEADER } from '@/components/utils/constants';
 import { buildProviderConfig } from './providers';
 import { finishGeneration, publishChunk, registerGeneration, subscribe, type GenerationHandle } from './streamHub';
 
-export const runtime = 'nodejs'; // module-level hub + detached drain need a long-lived process
+export const runtime = 'nodejs'; // the stream hub needs a long-running Node process
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+	const denied = await requireAllowedUser(req);
+	if (denied) return denied;
+
 	const { messages, model, reasoningEffort, textVerbosity, id: chatId } = await req.json();
 	const deviceId = req.headers.get(DEVICE_ID_HEADER) ?? '';
 	const promptMessages = await convertToModelMessages(messages);
@@ -40,9 +45,8 @@ export async function POST(req: Request) {
 			return createUIMessageStreamResponse({ stream: uiStream });
 		}
 
-		// One branch streams to the client; the other is drained into the hub.
-		// Draining server-side keeps generation alive if the client drops and
-		// buffers it for resume.
+		// One copy goes to the browser; the other is saved on the server, so the answer
+		// keeps generating if the browser disconnects and can be resumed.
 		const [clientStream, hubStream] = uiStream.tee();
 		const generation = registerGeneration(chatId, deviceId);
 		void drainIntoHub(generation, hubStream);
@@ -57,9 +61,11 @@ export async function POST(req: Request) {
 	}
 }
 
-// Reconnect endpoint for useChat. 204 means nothing to resume, which the SDK
-// treats as a no-op.
-export async function GET(req: Request) {
+// useChat reconnects here; a 204 tells it there is nothing to resume.
+export async function GET(req: NextRequest) {
+	const denied = await requireAllowedUser(req);
+	if (denied) return denied;
+
 	const chatId = new URL(req.url).searchParams.get('chatId');
 	const deviceId = req.headers.get(DEVICE_ID_HEADER) ?? '';
 	const stream = chatId ? subscribe(chatId, deviceId) : null;

@@ -1,5 +1,6 @@
 import NextAuth, { NextAuthOptions } from "next-auth"
 import GithubProvider from "next-auth/providers/github"
+import { isAllowedGithubUser } from "../allowedUser"
 
 const authOptions: NextAuthOptions = {
 	session: {
@@ -15,7 +16,13 @@ const authOptions: NextAuthOptions = {
 		colorScheme: "dark",
 	},
 	callbacks: {
+		async signIn({user}) {
+			return isAllowedGithubUser(user.id)
+		},
 		async jwt({token}) {
+			// Signs out sessions that belong to another account: throwing here makes
+			// next-auth delete the session cookie.
+			if (!isAllowedGithubUser(token.sub)) throw new Error("GitHub account not allowed")
 			token.userRole = "admin"
 			return token
 		},

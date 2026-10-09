@@ -84,7 +84,7 @@ const SideBar = () => {
 	} = useChatContext();
 
 	const handleSelectChat = (chatIndex: number) => {
-		// Switching chats abandons any in-flight turn, so it shouldn't resume here.
+		// Switching chats abandons any answer in progress, so it shouldn't resume.
 		clearActiveChatId();
 		loadChat(chatHistory[chatIndex]);
 		setCurrentChatIndex(chatIndex);
@@ -96,8 +96,8 @@ const SideBar = () => {
 			? models.find(model => model.value === storedModelValue)
 			: undefined;
 
-		// Jev has no chat view. A chat Jev answered before it had its own screen, or a
-		// chat whose model was removed opened while on Jev, uses the first chat model.
+		// Jev can't show chats. If Jev is selected and the chat's saved model is Jev
+		// (from before Jev had its own screen) or was removed, use the first chat model.
 		const chatModel = storedModel && !isJevModel(storedModel) ? storedModel : undefined;
 		const nextModel = chatModel ?? (isJevModel(currentModel) ? models.find(model => !isJevModel(model)) : undefined);
 

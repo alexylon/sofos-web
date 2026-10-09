@@ -1,12 +1,12 @@
 import { randomUUID } from 'crypto';
 import type { UIMessageChunk } from 'ai';
 
-// On iOS, backgrounding the PWA tears down the client's streaming connection,
-// which used to abort generation and show an error instead of the reply. This hub
-// moves stream ownership to the server: a POST drains the model output into a
-// per-chat buffer that runs regardless of the client, and a GET replays and tails
-// it on reconnect. Entries are ephemeral and device-scoped, so chat history stays
-// client-side; state lives in the single Node process and is lost on restart.
+// On iOS, putting the PWA in the background drops its connection, which used to
+// cut the answer off with an error. So the server keeps generating on its own:
+// POST stores the output per chat as it arrives, and GET replays it and then
+// continues live when the app reconnects. Entries are temporary, belong to one
+// device and live only in memory, so a restart loses them; chat history itself
+// stays in the browser.
 
 export interface GenerationHandle {
 	chatId: string;
@@ -26,7 +26,7 @@ interface HubEntry {
 const RESUME_TTL_MS = 10 * 60 * 1000;
 const MAX_ENTRIES = 50;
 
-// Survive dev HMR re-evaluation; a single shared instance in production.
+// Kept on globalThis so hot reloading in development doesn't reset it.
 const globalForHub = globalThis as unknown as { __sofosStreamHub?: Map<string, HubEntry> };
 const store: Map<string, HubEntry> = globalForHub.__sofosStreamHub ?? (globalForHub.__sofosStreamHub = new Map());
 
@@ -50,9 +50,9 @@ const evictIfNeeded = (): void => {
 	}
 };
 
-// Overwrites any existing entry so a new turn replaces a stale one. A private
-// generation id prevents an older detached drain from publishing into, or
-// finishing, the replacement entry after the map key is reused.
+// A new answer replaces any earlier entry for the chat. Each entry gets its own
+// id, so output still arriving for the replaced answer can't write into or end
+// the new one.
 export const registerGeneration = (chatId: string, deviceId: string): GenerationHandle => {
 	const existing = store.get(chatId);
 	if (existing?.evictTimer) clearTimeout(existing.evictTimer);
@@ -98,8 +98,8 @@ export const finishGeneration = (handle: GenerationHandle): void => {
 	entry.evictTimer = setTimeout(() => store.delete(handle.chatId), RESUME_TTL_MS);
 };
 
-// Replays buffered chunks, then tails live ones until done. Null when there is
-// nothing to resume or the device token doesn't own the generation.
+// Replays what was saved, then continues live until the answer is done. Returns
+// null if there is nothing to resume or the answer belongs to another device.
 export const subscribe = (chatId: string, deviceId: string): ReadableStream<UIMessageChunk> | null => {
 	const entry = store.get(chatId);
 	if (!entry || entry.deviceId !== deviceId) return null;

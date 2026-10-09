@@ -19,8 +19,8 @@ import {
 
 const STREAM_THROTTLE_MS = 100;
 const SCROLL_BOTTOM_OFFSET_RATIO = 0.6;
-// A dropped fetch can take a moment to reject after the app returns; recheck for
-// the error at these offsets (ms) before giving up on resuming.
+// After the app reopens, a dropped request can take a moment to fail; check for
+// the error at these times (ms) before giving up on resuming.
 const STREAM_RESUME_RETRY_MS = [150, 600, 1500];
 
 interface ChatContextType {
@@ -87,10 +87,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 	const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-	// Seed from a previous load's interrupted turn so resume targets that
-	// generation; otherwise a fresh id. This is stateful so switching chats can
-	// detach any old in-flight useChat instance instead of letting it mutate the
-	// newly selected chat.
+	// Starts as the id of a chat whose answer a reload interrupted, so the answer
+	// can be resumed, or else a new id. Kept in state so switching chats replaces
+	// the useChat instance, and an answer still arriving can't change the newly
+	// selected chat.
 	const [chatId, setChatId] = useState<string>(() => getActiveChatId() ?? newChatId());
 	const pendingSessionMessagesRef = useRef<UIMessage[] | null>(null);
 
@@ -98,12 +98,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 		() =>
 			new DefaultChatTransport({
 				api: '/api/use-stream-text',
-				// Per-device token scopes resume access; the shared login can't.
+				// Lets the server check that this device started the answer it resumes.
 				headers: (): Record<string, string> => {
 					const deviceId = getOrCreateDeviceId();
 					return deviceId ? { [DEVICE_ID_HEADER]: deviceId } : {};
 				},
-				// Reconnect hits the same route as a GET with the chat id.
 				prepareReconnectToStreamRequest: ({ id, api }) => ({
 					api: `${api}?chatId=${encodeURIComponent(id)}`,
 				}),
@@ -125,9 +124,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 		id: chatId,
 		messages: pendingSessionMessagesRef.current ?? undefined,
 		transport,
-		// Keep the active id while a turn might still be resumable (any interrupted
-		// stream — iOS reports backgrounding inconsistently as error or disconnect);
-		// a clean finish or user abort clears it.
+		// Keep the active chat id while the answer might still be resumable. iOS
+		// reports going to the background as either an error or a disconnect, so
+		// both keep it; a normal finish or a user stop clears it.
 		onFinish: ({ message, isAbort, isDisconnect, isError }) => {
 			if (!isError && !isDisconnect) clearActiveChatId();
 			persistence.onFinishCallback(message, { isAbort, isDisconnect, isError });
@@ -146,13 +145,13 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 	const isLoading = status === Status.SUBMITTED || status === Status.STREAMING;
 	const isDisabled = isLoading || !!error;
 
-	// Tracks a turn started in this page session, so we only reconnect to a
-	// generation this page actually launched — never on a cold reload.
+	// Set when this page starts an answer, so we only reconnect to answers this
+	// page started, never after a fresh page load.
 	const inFlightRef = useRef(false);
 	const prevStatusRef = useRef(status);
 
-	// Hides the dropped-fetch error while the foreground resume checks run, so it
-	// can't flash before the reply is rebuilt.
+	// Hides the connection error while the resume checks run after the app
+	// reopens, so it doesn't flash before the answer is restored.
 	const [resumePending, setResumePending] = useState(false);
 	const resumeAttemptRef = useRef(0);
 
@@ -184,7 +183,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 		setChatId(newChatId());
 	}, [clearError, stop]);
 
-	// Latest error, read inside the deferred resume checks below.
+	// Latest error, for the delayed resume checks below.
 	const errorRef = useRef(error);
 	useEffect(() => {
 		errorRef.current = error;
@@ -195,12 +194,12 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 		resumeStream();
 	}, [clearError, resumeStream]);
 
-	// iOS kills the stream when the PWA is backgrounded. On return, once the dropped
-	// fetch surfaces as an error, rebuild from the server buffer — dropping the
-	// trailing partial first so the replay doesn't duplicate it. Firing only on a
-	// return event leaves a healthy stream and a genuine foreground error untouched,
-	// and stops a replayed error looping (no new return means no retry). The attempt
-	// counter invalidates checks left over from an earlier foreground event.
+	// iOS cuts the connection when the PWA goes to the background. When the app
+	// reopens and the dropped request shows up as an error, rebuild the answer from
+	// the server's copy, removing the partial answer first so it isn't duplicated.
+	// Running only when the app reopens leaves working connections and real errors
+	// alone, and stops a replayed error from retrying forever. The attempt counter
+	// cancels checks left over from an earlier reopen.
 	useEffect(() => {
 		const onForeground = () => {
 			if (document.visibilityState !== 'visible') return;
@@ -241,16 +240,16 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 		};
 	}, [setMessages, triggerResume]);
 
-	// Persist the turn as soon as the user message lands, so it survives a reload
-	// mid-answer. Waits for isLoaded so it can't overwrite history before the async
-	// load applies; gated on inFlightRef so a restored chat isn't re-saved on load.
+	// Save the chat as soon as the user's message is added, so it survives a
+	// reload mid-answer. Waits for isLoaded so it can't overwrite history before it
+	// finishes loading, and checks inFlightRef so a restored chat isn't saved again.
 	useEffect(() => {
 		if (!isLoaded || !inFlightRef.current) return;
 		if (messages.length === 0 || messages[messages.length - 1].role !== 'user') return;
 		persistOptimistic(messages);
 	}, [messages, isLoaded, persistOptimistic]);
 
-	// After a reload, resume an interrupted turn once its messages are restored.
+	// After a reload, resume an interrupted answer once its messages are restored.
 	const didResumeRef = useRef(false);
 	useEffect(() => {
 		if (!isLoaded || didResumeRef.current) return;
@@ -285,8 +284,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 	const { images, files, setImages, setFiles } = fileUploads;
 	const { model, reasoningEffort, textVerbosity } = modelSettings;
 
-	// Start a resumable turn: both fields move together so a reload or backgrounding
-	// can reconnect to it.
+	// Marks an answer as in progress. Both are set together so the app can
+	// reconnect to it after a reload or after being in the background.
 	const markInFlight = useCallback(() => {
 		inFlightRef.current = true;
 		setActiveChatId(chatId);

@@ -67,19 +67,18 @@ else
     exit 1
 fi
 
-# The container is reached only by cloudflared, over a private Docker network
-# the two share, so nothing is published to the LAN: a port on 0.0.0.0 would be
-# a way into this app that skips Cloudflare Access entirely.
+# A cloudflared container on this network reaches the app as sofos:3333;
+# containers outside the network can't reach it.
 if ! docker network inspect tunnel > /dev/null 2>&1; then
     print_status "Creating the 'tunnel' network..."
     docker network create tunnel > /dev/null
 fi
 
 print_status "Starting new 'sofos' container..."
-# HOSTNAME=0.0.0.0 is required: Next.js binds to $HOSTNAME, which Docker sets to
-# the container id, and that resolves to one interface only — cloudflared then
-# cannot reach it from the shared network.
-if docker run -d --network tunnel -e HOSTNAME=0.0.0.0 --name sofos --restart unless-stopped --env-file .env.local innoxius/sofos:latest; then
+# Published on 127.0.0.1 only, for cloudflared installed on the machine itself;
+# 0.0.0.0 would expose the app to the local network. HOSTNAME=0.0.0.0 makes
+# Next.js listen on all interfaces, not just the one the container id resolves to.
+if docker run -d --network tunnel -p 127.0.0.1:3333:3333 -e HOSTNAME=0.0.0.0 --name sofos --restart unless-stopped --env-file .env.local innoxius/sofos:latest; then
     print_success "Container started successfully"
     print_success "Sofos is now running at https://ai.zaxo.io (via the Cloudflare tunnel)"
 else

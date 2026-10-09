@@ -46,7 +46,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const theme = useMemo(() => (mode === 'dark' ? darkTheme : lightTheme), [mode]);
 
-  // Prevent flash of unstyled content
+  // Render nothing until the system theme is known, so dark mode doesn't flash light first.
   if (!mounted) {
     return null;
   }

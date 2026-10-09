@@ -3,18 +3,18 @@
 import React, { useEffect, useRef } from 'react';
 import { getSession, SessionProvider, useSession } from 'next-auth/react';
 
-// Recheck offsets (ms); the network can take a few seconds to return after foregrounding.
+// Retry times (ms): the network can take a few seconds to come back after the app reopens.
 const SESSION_RECOVERY_RETRY_MS = [0, 1000, 4000];
 
-// With the focus refetch off, nothing else re-issues the JWT cookie, so roll it
-// at most once a day while the app is used.
+// Refresh the session cookie at most once a day while the app is in use; with
+// refetch-on-focus turned off, nothing else does.
 const SESSION_KEEP_ALIVE_MS = 24 * 60 * 60 * 1000;
 
-// After a failed session fetch nulls its session, next-auth v4 skips all further
-// refetches, leaving the app stuck on the login screen until a full reload. Its
-// storage-event channel still forces one, but storage events never fire in the
-// tab that writes them, so dispatch one synthetically. Key and payload shape
-// verified against next-auth 4.24.14; recheck on upgrade.
+// After one failed session check, next-auth v4 stops checking, and the app stays
+// on the login screen until a full reload. A storage event makes it check again,
+// but browsers don't send that event to the tab that caused it, so we send one
+// ourselves. Event key and format checked against next-auth 4.24.14; recheck
+// when upgrading.
 const forceSessionRefetch = (): void => {
 	window.dispatchEvent(new StorageEvent('storage', {
 		key: 'nextauth.message',
@@ -26,11 +26,10 @@ const forceSessionRefetch = (): void => {
 	}));
 };
 
-// Rechecks a "logged out" verdict on load, on each foreground, and when the
-// network returns: success means the cookie is valid and an earlier fetch merely
-// failed, so force a refetch; a genuinely logged-out user gets null and keeps
-// the login screen. Each event replaces the pending burst, and the first success
-// stops the rest.
+// Double-checks a "logged out" result on load, when the app reopens, and when
+// the network comes back. If the session is in fact valid, force a new check; a
+// user who really is logged out stays on the login screen. Each event restarts
+// the retries, and the first success stops them.
 const SessionRecovery: React.FC = () => {
 	const { status } = useSession();
 
@@ -75,13 +74,13 @@ const SessionRecovery: React.FC = () => {
 	return null;
 };
 
-// Rolls the JWT cookie for a PWA that is foregrounded for weeks without a
-// reload, where it would otherwise silently expire at maxAge. Pings the session
-// endpoint at most daily; a failed ping never touches provider state, so unlike
-// the focus refetch it cannot flip the UI to the login screen.
+// Keeps the session cookie fresh when the PWA stays open for weeks without a
+// reload, where it would otherwise expire. Checks the session at most once a day;
+// a failed check changes nothing, so unlike refetch-on-focus it can't send the
+// user to the login screen.
 const SessionKeepAlive: React.FC = () => {
 	const { status } = useSession();
-	// The mount fetch just rolled the cookie.
+	// The session check on page load just refreshed the cookie.
 	const lastPingRef = useRef(Date.now());
 
 	useEffect(() => {
@@ -113,10 +112,10 @@ interface NextAuthProviderProps {
 	children?: React.ReactNode;
 }
 
-// Focus refetch is off: on iOS PWA resume the network is often not back yet, so
-// the refetch fails and next-auth drops the session with no retry. SessionRecovery
-// covers a failed initial fetch after iOS reloads the page; SessionKeepAlive
-// takes over the cookie refresh the focus refetch used to provide.
+// Refetch-on-focus is off: when the iOS PWA reopens, the network often isn't back
+// yet, so the check fails and next-auth drops the session without retrying.
+// SessionRecovery handles a failed check after iOS reloads the page, and
+// SessionKeepAlive takes over keeping the cookie fresh.
 export const NextAuthProvider: React.FC<NextAuthProviderProps> = ({ children }) => {
 	return (
 		<SessionProvider refetchOnWindowFocus={false}>

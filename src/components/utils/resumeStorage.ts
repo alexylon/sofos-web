@@ -1,6 +1,6 @@
-// Synchronous client-side storage for stream resume. Read synchronously to build
-// a request header and seed useChat's id, so it uses localStorage rather than the
-// app's async IndexedDB layer.
+// Storage for resuming answers. It's read synchronously (for a request header
+// and useChat's starting id), so it uses localStorage instead of the app's
+// async IndexedDB storage.
 
 const DEVICE_ID_KEY = 'sofos:deviceId';
 const ACTIVE_CHAT_ID_KEY = 'sofos:activeChatId';
@@ -29,7 +29,7 @@ const write = (key: string, value: string): void => {
 	try {
 		window.localStorage.setItem(key, value);
 	} catch {
-		// ignore (private mode, quota)
+		// Ignore: storage can be blocked (private mode) or full.
 	}
 };
 
@@ -45,7 +45,7 @@ const remove = (key: string): void => {
 
 export const newChatId = (): string => randomId();
 
-// Per-device token. Resume is scoped by this, not the shared login.
+// Random id for this device; only the device that started an answer can resume it.
 export const getOrCreateDeviceId = (): string => {
 	let id = read(DEVICE_ID_KEY);
 
@@ -57,8 +57,8 @@ export const getOrCreateDeviceId = (): string => {
 	return id;
 };
 
-// Chat id of an interrupted generation: set on send, cleared when the turn ends
-// cleanly, kept across a reload so it can be resumed.
+// Id of the chat whose answer is still in progress: set on send, cleared when the
+// answer finishes normally, and kept across a reload so it can be resumed.
 export const getActiveChatId = (): string | null => read(ACTIVE_CHAT_ID_KEY);
 export const setActiveChatId = (chatId: string): void => write(ACTIVE_CHAT_ID_KEY, chatId);
 export const clearActiveChatId = (): void => remove(ACTIVE_CHAT_ID_KEY);

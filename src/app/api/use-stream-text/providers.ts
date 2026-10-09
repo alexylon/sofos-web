@@ -33,10 +33,10 @@ const buildAnthropic = ({ modelValue, reasoningEffort, promptMessages }: Builder
 				effort: reasoningEffort as AnthropicEffortValue,
 			};
 
-	// 1h breakpoint on the static system prompt + 5m rolling breakpoint on the
-	// last message so the cached prefix grows with the conversation. The SDK
-	// strips cache_control from provider-supplied tools, so webSearch_20250305
-	// can't carry a tools breakpoint.
+	// Anthropic prompt caching: the system prompt is cached for 1 hour, and the
+	// conversation up to the last message for 5 minutes, so the cached part grows
+	// as the chat goes on. Tools can't be marked for caching on their own: the SDK
+	// drops cache settings from provider tools such as web search.
 	const systemPrompt: SystemModelMessage = {
 		role: 'system',
 		content: SYSTEM_PROMPT,
@@ -106,13 +106,13 @@ const buildOpenAI = ({
 	const openaiOptions: OpenAIResponsesProviderOptions = {
 		reasoningEffort: (isMiniMinimal ? 'minimal' : reasoningEffort) as OpenAIReasoningEffort,
 		textVerbosity: textVerbosity as OpenAIResponsesProviderOptions['textVerbosity'],
-		// Round-trip the encrypted hidden chain-of-thought so the model
-		// doesn't re-derive its reasoning on every tool turn.
+		// Get the model's reasoning back in encrypted form and send it with the next
+		// request, so it doesn't have to reason from scratch after each tool call.
 		include: ['reasoning.encrypted_content'],
 		store: false,
 		reasoningSummary: 'auto',
-		// Per-chat routing key so follow-up turns land on the same OpenAI
-		// cache node and the prefix actually hits its prompt cache.
+		// Same key for every request in a chat, so OpenAI is more likely to reuse its
+		// cache of the earlier conversation.
 		promptCacheKey: chatId,
 	};
 

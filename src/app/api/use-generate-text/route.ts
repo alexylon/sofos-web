@@ -1,9 +1,14 @@
 import { openai } from '@ai-sdk/openai';
 import { convertToModelMessages, generateText } from 'ai';
+import type { NextRequest } from 'next/server';
+import { requireAllowedUser } from '@/app/api/auth/allowedUser';
 
 export const maxDuration = 60;
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+	const denied = await requireAllowedUser(req);
+	if (denied) return denied;
+
 	const { messages, model } = await req.json();
 
 	try {

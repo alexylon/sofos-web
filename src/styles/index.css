@@ -6,16 +6,13 @@ body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     line-height: 150%;
-    /*overflow: hidden;*/
 }
 
-/* Light theme (default) */
 body {
     background-color: #F0F0F0;
     color: #000000;
 }
 
-/* Dark theme */
 @media (prefers-color-scheme: dark) {
     body {
         background-color: #000000;

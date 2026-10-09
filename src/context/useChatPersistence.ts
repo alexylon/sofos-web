@@ -56,7 +56,7 @@ export const useChatPersistence = ({
 	const [currentChatIndex, setCurrentChatIndex] = useState<number>(NEW_CHAT_INDEX);
 	const [isLoaded, setIsLoaded] = useState(false);
 
-	// Mirror so the chatHistory updaters below can read the active index synchronously.
+	// Kept in a ref so the chatHistory updaters below always read the latest index.
 	const currentChatIndexRef = useRef(currentChatIndex);
 	useEffect(() => {
 		currentChatIndexRef.current = currentChatIndex;
@@ -125,12 +125,12 @@ export const useChatPersistence = ({
 		void saveChatHistoryToStorage(history);
 	}, []);
 
-	// Write the given messages into the active chat slot, creating it for a new
-	// chat. Used both when a message is sent and when the answer finishes.
+	// Writes the messages into the active chat, creating it if it's new. Called
+	// when a message is sent and when the answer finishes.
 	const writeCurrentChat = useCallback((msgs: UIMessage[]) => {
 		if (msgs.length === 0) return;
 
-		// Captured once so the updater stays pure under StrictMode's double-invoke.
+		// Read once, so the updater gives the same result when StrictMode runs it twice.
 		const baseIndex = currentChatIndexRef.current;
 
 		setChatHistory(prevChatHistory => {
@@ -168,8 +168,8 @@ export const useChatPersistence = ({
 		router.push('/new');
 	}, [router, setMessages]);
 
-	// Save the sent turn immediately so the user message survives a reload while
-	// the answer is still generating.
+	// Save the sent message right away so it survives a reload while the answer
+	// is still generating.
 	const persistOptimistic = useCallback((msgs: UIMessage[]) => {
 		if (msgs.length === 0) return;
 		const last = msgs[msgs.length - 1] as StoredUIMessage;
@@ -178,9 +178,9 @@ export const useChatPersistence = ({
 	}, [writeCurrentChat]);
 
 	const onFinishCallback = useCallback((message: UIMessage, flags?: FinishFlags) => {
-		// A dropped connection, hard error, or abandoned chat switch leaves a partial
-		// message; keep the slot at the user message so the turn can resume or be
-		// abandoned without corrupting another selected chat.
+		// A dropped connection, an error, or switching chats mid-answer leaves a
+		// partial answer. Keep only the user's message saved, so the answer can be
+		// resumed or dropped without affecting another chat.
 		if (flags?.isAbort || flags?.isDisconnect || flags?.isError) return;
 
 		const stored = message as StoredUIMessage;

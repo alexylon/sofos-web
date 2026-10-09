@@ -32,7 +32,11 @@ Supports OpenAI, Anthropic, Google, and TypeSafe models and their API keys.
 
 `GITHUB_SECRET` - go to GitHub -> Settings -> Developer Settings -> OAuth Apps -> New OAuth App
 
+`ALLOWED_GITHUB_USER_ID` - the numeric id of the only GitHub account that can sign in and use the app; https://api.github.com/users/YOUR-LOGIN shows it as `id`
+
 `NEXTAUTH_SECRET` - generate a random string
+
+`NEXTAUTH_URL` - the URL the app is served at, e.g. `https://sofos.me`, or `http://localhost:3000` for `npm run dev`; the OAuth app's callback URL must be this plus `/api/auth/callback/github`
 
 Currently, there is no database support.
 

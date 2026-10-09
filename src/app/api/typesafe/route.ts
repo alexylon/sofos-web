@@ -1,3 +1,5 @@
+import type { NextRequest } from 'next/server';
+import { requireAllowedUser } from '@/app/api/auth/allowedUser';
 import type { JevAnswer } from '@/types/types';
 
 const SYSTEM_ONE_URL = 'https://api.typesafe.ai/v1/systemone';
@@ -10,7 +12,10 @@ const ATTEMPT_TIMEOUT_MS = 15000;
 
 export const maxDuration = 60;
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+	const denied = await requireAllowedUser(req);
+	if (denied) return denied;
+
 	const request = await req.json().catch(() => null);
 
 	if (!request) {

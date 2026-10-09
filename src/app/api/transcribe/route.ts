@@ -1,10 +1,15 @@
 import { experimental_transcribe as transcribe } from 'ai';
 import { openai } from '@ai-sdk/openai';
+import type { NextRequest } from 'next/server';
+import { requireAllowedUser } from '@/app/api/auth/allowedUser';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+	const denied = await requireAllowedUser(req);
+	if (denied) return denied;
+
 	try {
 		const formData = await req.formData();
 		const audioFile = formData.get('audio') as File;
